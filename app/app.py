@@ -53,7 +53,10 @@ def api_logout(request):
 
 @route("/api/bans/list")
 def api_bans_list(request):
-    bans = get_redis().lrange("bans", 0, -1)
+    start = int(request.args.get("start", 0))
+    end = int(request.args.get("end", -1))
+
+    bans = get_redis().lrange("bans", start, end)
     return JsonResponse({
         "size": len(bans),
         "bans": bans
@@ -87,7 +90,10 @@ def api_bans_get(request, steamid):
 # /api/logout - logs out of the api
 
 # /api/bans/list - list of all bans by steamid. PUBLIC!
-# /api/ban/get- get more detailed information about a ban for a steamid, reason, duration, and punisher, PUBLIC!
+# /api/bans/get - get more detailed information about a ban for a steamid, reason, duration, and punisher, PUBLIC!
+# /api/bans/ping - log a attempted connection for a banned user by steamid SERVER!
+# /api/bans/add - add a ban for a steamid PRIVATE!
+# /api/bans/rmv - remove a ban for a steamid PRIVATE!
 
 # /api/client/poll - js polling API
 # /api/client/info - returns information about the current user
@@ -109,16 +115,21 @@ def api_bans_get(request, steamid):
 # /api/players/invite - invite a player to a lobby
 
 # SERVER
-# /api/matches/start - starts a match given serverid and lobbyid
-# /api/matches/heartbeat - keeps a match alive given serverid and lobbyid
-# /api/matches/end - ends an ongoing match
-# /api/lobbies/config - gets a server configuration from a lobby id
-# /api/servers/poll - polls for a match to load
+# /api/matches/start - starts a match given matchid SERVER!
+# /api/matches/heartbeat - keeps a match alive given matchid SERVER!
+# /api/matches/end - ends an ongoing match SERVER!
+# /api/lobbies/config - gets a server configuration from a matchid SERVER!
+# /api/servers/poll - polls for a match to load SERVER!
+# /api/servers/register - register this server with the master, returns serverid, sessionid SERVER!
+# /api/servers/list - list active servers PRIVATE!
 
-# PRIVATE
-# /api/bans/add - add a ban for a steamid
-# /api/bans/rmv - remove a ban for a steamid
-# /api/servers/list - list active servers
+
+
+
+# SERVER WORKFLOW:
+# server send /api/servers/register with serverid and serverhash, if these match
+#  within the database, backend creates a "server session" w/ the source IP
+#  locked. Server uses request on rest of calls
 
 
 run("localhost", 8080)
