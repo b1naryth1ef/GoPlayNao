@@ -1,135 +1,21 @@
-from klein import run, route
-from util import JsonResponse, allow, APIError, params, authed
-from database import create_session, get_redis
+from flask import Flask, g, session, request
+from views.public import public
+from views.api import api
+from database import User
 
-@allow("GET")
-@route('/api')
-def api_index(request):
-    """
-    Returns basic information about the API.
+app = Flask(__name__)
+app.secret_key = "change_me"
 
-    version: an incrementing API version (for the public, internally we
-        only support the current version #)
-    status: a status integer indiciating the state of the system,
-        1: OK
-        2: HIGH_LOAD (limited request rate)
-        3: EXTREME_LOAD (requests may end or die, system is in a bad state)
-        -1: INACTIVE OR UNAVALIBILE
-    """
-    status = get_redis().get("status")
-    return JsonResponse({
-        "version": 1,
-        "status": status,
-    })
+app.register_blueprint(public)
+app.register_blueprint(api)
 
-@allow("POST")
-@route('/api/login')
-@params(username=str, password=str)
-def api_login(request, username, password):
-    """
-    Allows a user to authenticate within the system. Takes a username/password
-    as post variables, returns json response and maybe a cookie session.
-    """
-    if username == "b1n" and password == "b1n":
-        sessid = create_session(1)
-        request.addCookie("session", sessid)
-        return JsonResponse({
-            "username": username,
-            "session": sessid
-        })
-    return APIError("Invalid Login Credentials", 401)
+@app.before_request
+def beforeRequest():
+    if request.cookies.get("sid"):
+        s = Session.find(request.cookies.get("sid"))
+        if not s:
+            del request.cookies['sid']
+        g.user = User.select().where(User.id == s['user']).get(0)
 
-@allow("POST")
-@authed()
-@route('/api/logout')
-def api_logout(request):
-    sessid = request.getCookie("session")
-    if not sessid:
-        return APIError("Not Logged In!", 400)
-    delete_session(sessid)
-    return JsonResponse({
-        "msg": "You have been logged out successfully!"
-    })
-
-@route("/api/bans/list")
-def api_bans_list(request):
-    start = int(request.args.get("start", 0))
-    end = int(request.args.get("end", -1))
-
-    bans = get_redis().lrange("bans", start, end)
-    return JsonResponse({
-        "size": len(bans),
-        "bans": bans
-    })
-
-@route("/api/bans/get")
-@params(steamid=str)
-def api_bans_get(request, steamid):
-    r = get_redis()
-    if r.exists("ban:%s" % steamid):
-        data = r.hgetall("ban:%s" % steamid)
-        data.update({
-            "active": True,
-            "id": steamid,
-        })
-        return JsonResponse(data)
-    return APIError("No Such Ban", 404)
-
-# Client
-# Lobby: represents a group of players looking for a game, either open or
-#  private. Lobbyid's stay active for 1 month, and then are GC'd/expired.
-
-# Match: represents a present or past match which includes data on the server,
-#  players, and stats within. Matchid's never expire
-
-# Player: represents a user in the system. One per steamid.
-
-# /api returns information about the api, incl. version and status
-
-# /api/login - logs into the api
-# /api/logout - logs out of the api
-
-# /api/bans/list - list of all bans by steamid. PUBLIC!
-# /api/bans/get - get more detailed information about a ban for a steamid, reason, duration, and punisher, PUBLIC!
-# /api/bans/ping - log a attempted connection for a banned user by steamid SERVER!
-# /api/bans/add - add a ban for a steamid PRIVATE!
-# /api/bans/rmv - remove a ban for a steamid PRIVATE!
-
-# /api/client/poll - js polling API
-# /api/client/info - returns information about the current user
-
-# /api/lobbies/list - list lobbies relevant to player (open/shared)
-# /api/lobbies/get - get detailed information on a lobby, needs lobbyid
-# /api/lobbies/create - create a new lobby, returns a lobbyid
-# /api/lobbies/poll - js polling API for a lobby
-# /api/lobbies/action - fire an action on this lobby, kicks, edits, configs /etc
-
-# /api/matches/list - list matches relevant to player
-# /api/matches/get - get detailed information on match, needs matchid
-# /api/matches/stats - get stats on the match (detailed)
-
-# /api/players/get - get information on a specific player, given playerid
-# /api/players/search - search for a player in the system, multi-param
-# /api/players/friend - add a friend given playerid
-# /api/players/stats - get specific stats on a player
-# /api/players/invite - invite a player to a lobby
-
-# SERVER
-# /api/matches/start - starts a match given matchid SERVER!
-# /api/matches/heartbeat - keeps a match alive given matchid SERVER!
-# /api/matches/end - ends an ongoing match SERVER!
-# /api/lobbies/config - gets a server configuration from a matchid SERVER!
-# /api/servers/poll - polls for a match to load SERVER!
-# /api/servers/register - register this server with the master, returns serverid, sessionid SERVER!
-# /api/servers/list - list active servers PRIVATE!
-
-
-
-
-# SERVER WORKFLOW:
-# server send /api/servers/register with serverid and serverhash, if these match
-#  within the database, backend creates a "server session" w/ the source IP
-#  locked. Server uses request on rest of calls
-
-
-run("localhost", 8080)
+if __name__ == "__main__":
+    app.run(debug=True)

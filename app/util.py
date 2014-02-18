@@ -1,88 +1,53 @@
-from twisted.web import resource
-import ujson as json
-from database import *
+from flask import request, flash, redirect, g
+from database import Session, redis
+from functools import wraps
 
-class AnyResource(resource.Resource):
-    def render_GET(self, request): return self.render(request)
-    def render_POST(self, request): return self.render(request)
+def flashy(m, f="error", u="/"):
+    flash(m, f)
+    return redirect(u)
 
-class JsonResponse(AnyResource):
-    """
-    Represents a json resource, which is based on data given in a dictionary
-    or list format. This returns the correct content encoding and meta
-    tags for a json resource.
-    """
-    isLeaf = True
+class DummyObj(object):
+    def __init__(self, kwargs):
+        self.__dict__.update(kwargs)
 
-    def __init__(self, data):
-        self.data = data
-        resource.Resource.__init__(self)
+    def __getattr__(self, name):
+        return None
 
-    def render(self, request):
-        request.setHeader("content-type", "application/json")
-        return json.dumps(self.data)
+def require(**need):
+    result, missing = {}, False
+    for k, v in need.items():
+        if k not in request.values:
+            missing = True
+            continue
+        try:
+            result[k] = v(request.values.get(k))
+        except:
+            missing = True
+    return DummyObj(result), not missing
 
-class APIException(AnyResource):
-    id = 0
-    code = 500
-
-    def __init__(self, msg, code=None):
-        self.msg = msg
-        self.code = code or self.code
-        resource.Resource.__init__(self)
-
-    def render(self, request):
-        request.setHeader("content-type", "application/json")
-        request.setResponseCode(self.code)
-        return json.dumps({
-            "id": self.id,
-            "error": "%s: %s" % (self.__class__.__name__, self.msg)
-        })
-
-class InvalidMethod(APIException):
-    id = 1
-    code = 405
-
-class APIError(APIException):
-    id = 2
-    code = 400
-
-def allow(*methods):
-    def deco(a):
-        def _f(request, *args, **kwargs):
-            if request.method not in methods:
-                return InvalidMethodException("%s" % request.method)
-            return a(request, *args, **kwargs)
+def authed(level=0, err=None):
+    def deco(f):
+        @wraps(f)
+        def _f(*args, **kwargs):
+            if not g.user:
+                return err() if err else "Error!", 400
+            return f(*args, **kwargs)
         return _f
     return deco
 
-def params(**required):
-    def deco(b):
-        def _f(request, *args, **kwargs):
-            gathered = {}
-            for k, v in required.items():
-                if k not in request.args:
-                    return APIError("Requires paramater `%s`" % k)
-                val = request.args[k][0]
-                try:
-                    v(val)
-                except:
-                    return APIError("Paramater `%s` must be type `%s`" % (k, v))
-                gathered[k] = val
-            return b(request, **gathered)
-        return _f
-    return deco
 
-def authed():
-    def deco(c):
-        def _f(request, **kwargs):
-            id = request.getCookie("session")
-            userid = get_session(id)
-            if not userid:
-                return APIError("No valid session!", 401)
-            request.user = User.get(userid)
-            if not request.user:
-                return APIError("Invalid User!", 401)
-            return c(request, **kwargs)
+def limit(per_minute):
+    def deco(f):
+        @wraps(f)
+        def _f(*args, **kwargs):
+            if 'server' not in g:
+                k = "rl:%s" % request.remote_addr
+                if not redis.exists(k):
+                    redis.setex(k, 1, 60)
+                    return f(*args, **kwargs)
+                if int(redis.get(k)) > per_minute:
+                    return "Too many requests per minute!", 429
+                redis.incr(k)
+            return f(*args, **kwargs)
         return _f
     return deco

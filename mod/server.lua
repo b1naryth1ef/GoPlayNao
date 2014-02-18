@@ -67,8 +67,8 @@ function Plugin:Initialise()
         hash = self.Config.ServerHash
     })
 
-    -- For testing
-    self:BuildTestMatch()
+    match = {}
+    match.state = STATE_NONE
 end
 
 -- Check whether the game should start yet
@@ -80,6 +80,8 @@ function Plugin:CheckGameStart(gr)
     if State == kGameState.PreGame or State == kGameState.NotStarted then
         if tablelength(match.data.players) == match.size then
             local com1, com2 = Plugin:GetCommanders(gr)
+
+            -- If we do not have two commanders, don't start
             if not com1 or not com2 then
                 return false
             end
@@ -103,23 +105,31 @@ function Plugin:ClientConnect(client)
     if not id then return end
 
     if not match.players[id] then
-        Plugin:Kick(client, "player not in current match!")
+        self:Kick(client, "player not in current match!")
         return
     end
 
     -- TODO: add function to get base table for player
     match.data.players[id] = {}
 
+    -- Grab the player
+    local player = Client:GetControllingPlayer()
+
     -- Tell the world the player joined if we're getting ready
     if match.state ~= STATE_PLAYING then
-        player = Client:GetControllingPlayer()
         Shine:Print("Player %s joined the server, %s/%s players connected",
             true,
             player:GetName(),
             tablelength(match.data.players),
             match.size)
     end
-    -- TODO: Assign player to team
+
+    -- Assign the player to a team based on match data
+    local gr = GetGamerules()
+    gr:JoinTeam(player, match.players[id])
+
+    -- Check bans (async)
+    self:CheckBan(client)
 end
 
 -- Remove the player from match data, this is temporary and should be fixed later
@@ -127,11 +137,20 @@ function Plugin:ClientDisconnect(client)
     id = self:GetSteamID(client)
     if not id then return end
 
-    if match.data.players[id] then
+    if match.state ~= STATE_PLAYING then
         match.data.players[id] = nil
+    elseif match.state == STATE_PLAYING
+        -- If a player is disconnected for 3 minutes, create a cooldown for them
+        --  the backend will create a appropriet ban/etc.
+        local tname = string.format("dc_%s", id)
+        self:DestroyTimer(tname)
+        self:CreateTimer(tname, 60 * 3, 1, function()
+            request("players/cooldown", nil, "POST", {
+                id = id,
+                why = 1
+            })
+        end)
     end
-
-    -- TODO: start reconnect timer before cooldown
 end
 
 -- Gets a clients steamid
@@ -181,6 +200,8 @@ function Plugin:API_MatchesStart(response)
     local data = json.decode(response)
     if data and data.success then
         Shine:Print("STARTING MATCH #%s!", true, match.id)
+        -- Just get rid of this shit
+        self:DestroyTimer("rup_or_ban")
 
         local gr = GetGamerules()
         gr:ResetGame()
@@ -197,24 +218,80 @@ function Plugin:API_BansGet(response)
         return
     end
 
-    -- If the player is banned, kick them
-    -- TODO: send a request to the server, and track connects by banned players
+    -- If the player is banned, kick them and ping the backend server
     local data = json.decode(response)
     if data and data.active then
+        -- Get client and kick
         local cli = Shine.GetClientBySteamID(data.id)
-        local msg = string.format("You are banned from all NS2PUG servers: %s", data.reason)
+        local msg = string.format("Player is banned from all NS2PUG servers: %s", data.reason)
         self:Kick(cli, msg)
+
+        -- Tell the backend someone tried to connect.
+        request("bans/ping", nil, "POST", {
+            id: data.id
+        })
     end
 end
 
+-- Check if a player is banned
 function Plugin:CheckBan(cli)
     request("bans/get", self:API_BansGet, "GET", {
         id: self:GetSteamId(cli)
     })
 end
 
+-- Get both teams commanders
 function Plugin:GetCommanders(gamerules)
     return gamerules.team1:GetCommander(), gamerules.team2:GetCommander()
+end
+
+-- TODO: this will get data from the backend ping call
+function Plugin:SetupMatch()
+    -- Players have 5 minutes to connect or they are cooldowned
+    self:CreateTimer("rup_or_ban", 60 * 5, 1, function()
+        if match.state == STATE_SETUP then
+            for k, v in pairs(match.players) do
+                local cli = Shine.GetClientBySteamID(k)
+                if not cli then
+                    request("players/cooldown", nil, "POST", {
+                        id = k,
+                        why = 2
+                    })
+                end
+            end
+        end
+    end)
+end
+
+function Plugin:WaitForMatch()
+    self:DestroyTimer("match_wait")
+    self:CreateTimer("match_wait", 15, 0, function ()
+        request("servers/poll", function (resp) 
+            if not resp or resp == "" then
+                warn("Error polling!")
+                return
+            end
+
+            local data = json.decode(resp)
+            if data.match then
+                self:BuildMatch(data.match)
+            end
+
+        end, "POST")
+    end)
+
+end
+
+function Plugin:BuildMatch(data)
+    match = {}
+    match.id = data.id
+    match.size = data.size
+    match.players = data.players
+    match.state = STATE_SETUP
+    match.config = data.config
+    match.data = {
+        players: {}
+    }
 end
 
 -- TEST/TEMP FUNCTIONS
@@ -222,7 +299,8 @@ function Plugin:BuildTestMatch()
     match = {}
     match.id = 1
     match.size = 12 -- 6v6
-    match.players = {"38683497": true}
+    -- steamid:teamid
+    match.players = {38683497: 1}
     match.state = STATE_SETUP
     match.data = {
         players = {}
