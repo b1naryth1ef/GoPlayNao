@@ -1,6 +1,7 @@
 from flask import request, flash, redirect, g
 from database import Session, redis
 from functools import wraps
+from dateutil.relativedelta import relativedelta
 
 def flashy(m, f="error", u="/"):
     flash(m, f)
@@ -35,13 +36,28 @@ def authed(level=0, err=None):
         return _f
     return deco
 
-
-def limit(per_minute):
+def server():
     def deco(f):
         @wraps(f)
         def _f(*args, **kwargs):
-            if 'server' not in g:
-                k = "rl:%s" % request.remote_addr
+            if not g.server:
+                return jsonify({"success": False, "error": 3, "msg": "Invalid Server Session!"})
+            return f(*args, **kwargs)
+        return _f
+    return deco
+
+def limit(per_minute):
+    """
+    Enables ratelimiting for an endpoint, is ALWAYS ignored for server
+    requests.
+    """
+    def deco(f):
+        @wraps(f)
+        def _f(*args, **kwargs):
+            if not g.server:
+                # TODO: this could be used as a DoS attack by filling up
+                #  redis. Maybe add global rate limiting?
+                k = "rl:%s_%s" % (f.__name__, request.remote_addr)
                 if not redis.exists(k):
                     redis.setex(k, 1, 60)
                     return f(*args, **kwargs)
@@ -51,3 +67,6 @@ def limit(per_minute):
             return f(*args, **kwargs)
         return _f
     return deco
+
+attrs = ['years', 'months', 'days', 'hours', 'minutes', 'seconds']
+human_readable = lambda delta: ['%d %s' % (getattr(delta, attr), getattr(delta, attr) > 1 and attr or attr[:-1]) for attr in attrs if getattr(delta, attr)]

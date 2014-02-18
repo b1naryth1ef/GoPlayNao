@@ -7,7 +7,7 @@ Match: represents a present or past match which includes data on the server,
 
 Player: represents a user in the system. One per steamid.
 
-/api returns information about the api, incl. version and status and username
+/api/info returns information about the api, incl. version and status and username
 
 
 /api/bans/list - list of all bans by steamid. PUBLIC!

@@ -63,8 +63,8 @@ end
 -- Sets up the plugin
 function Plugin:Initialise()
     request("servers/register", self:API_GetSessionID, "POST", {
-        id = self.Config.ServerID,
-        hash = self.Config.ServerHash
+        sid = self.Config.ServerID,
+        shash = self.Config.ServerHash
     })
 
     match = {}
@@ -108,6 +108,10 @@ function Plugin:ClientConnect(client)
         self:Kick(client, "player not in current match!")
         return
     end
+
+    -- Delete the cooldown timer if its there
+    local tname = string.format("dc_%s", id)
+    self:DestroyTimer(tname)
 
     -- TODO: add function to get base table for player
     match.data.players[id] = {}
@@ -182,7 +186,7 @@ function Plugin:API_GetSessionID(response)
 
     -- Decode data and get the sessionid
     local data = json.decode(response)
-    if data and data.sessionid then
+    if data and data.success then
         sessionid = data.sessionid
         debug("Server registered with master, has sessionid: %s", sessionid)
     else
@@ -222,13 +226,15 @@ function Plugin:API_BansGet(response)
     local data = json.decode(response)
     if data and data.active then
         -- Get client and kick
-        local cli = Shine.GetClientBySteamID(data.id)
-        local msg = string.format("Player is banned from all NS2PUG servers: %s", data.reason)
+        local cli = Shine.GetClientBySteamID(data.steamid)
+        local msg = string.format("Player is banned for %s on all NS2PUG servers: %s",
+            data.duration, 
+            data.reason)
         self:Kick(cli, msg)
 
         -- Tell the backend someone tried to connect.
         request("bans/ping", nil, "POST", {
-            id: data.id
+            banid: data.id
         })
     end
 end
@@ -236,7 +242,7 @@ end
 -- Check if a player is banned
 function Plugin:CheckBan(cli)
     request("bans/get", self:API_BansGet, "GET", {
-        id: self:GetSteamId(cli)
+        steamid: self:GetSteamId(cli)
     })
 end
 
@@ -253,7 +259,7 @@ function Plugin:SetupMatch()
             for k, v in pairs(match.players) do
                 local cli = Shine.GetClientBySteamID(k)
                 if not cli then
-                    request("players/cooldown", nil, "POST", {
+                    request("bans/cooldown", nil, "POST", {
                         id = k,
                         why = 2
                     })

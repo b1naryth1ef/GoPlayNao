@@ -1,4 +1,5 @@
 from peewee import *
+from playhouse.postgres_ext import *
 from datetime import *
 from flask import request
 import bcrypt, json, redis
@@ -17,6 +18,7 @@ class User(BaseModel):
     username = CharField()
     email = CharField()
     password = CharField()
+    steamid = CharField()
 
     active = BooleanField(default=True)
     join_date = DateTimeField(default=datetime.utcnow)
@@ -48,6 +50,9 @@ class Ban(BaseModel):
 
     source = CharField()
 
+    # Match Reference
+    # match = ForeignKeyField(Match, null=True)
+
     def format(self):
         return {
             "id": self.id,
@@ -57,8 +62,70 @@ class Ban(BaseModel):
             "start": int(self.start.strftime("%s")),
             "end": int(self.end.strftime("%s")),
             "reason": self.reason,
-            "source": self.source
+            "source": self.source,
+            "duration": human_readable(self.end-self.start) if self.end self.start else ""
         }
+
+    def log(self, data, action=None, user=None, server=None):
+        log = BanLog()
+        log.action = action or BanLogType.BAN_LOG_GENERIC
+        log.user = user
+        log.server = server
+        log.ban = self
+        log.data = data
+        log.save()
+        return log.id
+
+class BanLogType(object):
+    BAN_LOG_GENERIC = 1
+    BAN_LOG_ERROR = 2
+    BAN_LOG_ATTEMPT = 3
+    BAN_LOG_ESCALATE = 4
+    BAN_LOG_EXTEND = 5
+    BAN_LOG_EXPIRE = 6
+    BAN_LOG_INVALIDATE = 7
+
+class BanLog(BaseModel):
+    """
+    Logs an action that happened to a ban
+    """
+    action = IntegerField(default=BanLogType.BAN_LOG_GENERIC)
+    ban = ForeignKeyField(Ban)
+    user = ForeignKeyField(User, null=True)
+    server = ForeignKeyField(Server, null=True)
+    created = DateTimeField(default=datetime.utcnow)
+    data = HStoreField()
+
+class ServerType():
+    SERVER_PUG = 1
+    SERVER_DEV = 2
+    SERVER_PRIV = 3
+    SERVER_OTHER = 4
+
+class Server(BaseModel):
+    name = CharField()
+    region = CharField()
+    rcon = CharField()
+    hash = CharField()
+    hosts = ArrayField(CharField)
+
+    lastping = DateTimeField()
+
+    mode = IntegerField(default=ServerType.SERVER_PUG)
+
+    owner = ForeignKeyField(User)
+    active = BooleanField()
+
+    def createSession(self):
+        while True:
+            id = get_random_number(SESSION_ID_SIZE)
+            if not redis.exists("ss:%s" % id):
+                break
+
+        redis.setex("ss:%s" % id, self.id, cls.LIFETIME)
+        return id
+
+    def getActiveMatch(self): pass
 
 class Session(object):
     db = redis
@@ -96,3 +163,5 @@ class Session(object):
 if __name__ == "__main__":
     User.create_table(True)
     Ban.create_table(True)
+    BanLog.create_table(True)
+    Server.create_table(True)

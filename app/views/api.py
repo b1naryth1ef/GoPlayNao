@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, flash, redirect, request, g, session, jsonify
-from database import User, Session, redis, Ban
+from database import *
 from util import *
 import time, json
 
@@ -94,15 +94,16 @@ def api_bans_get():
         end: end date (if any, null = perma)
         reason: the ban reason (if any)
         source: the banner (if any)
+        duration: human readable duration
 
     This endpoint is limited to 60 requests per minute.
     """
-    args, success = require(steamid=int, banid=int, userid=int)
+    args, _ = require(steamid=int, banid=int, userid=int)
 
     if not any([args.steamid, args.banid, args.userid]):
         return jsonify({
             "success": False,
-            "msg": "You must specifiy either steamid or banid for /bans/get"
+            "msg": "You must specify either steamid or banid for /bans/get"
         })
 
     if args.steamid:
@@ -120,3 +121,78 @@ def api_bans_get():
     data = b.format()
     data['success'] = True
     return jsonify(data)
+
+@api.route("/bans/ping")
+@server()
+def api_bans_ping():
+    """
+    Called by a server to notify the backend a banned client tried connecting.
+    This should really never happen, becuase the backend will not allow
+    banned players to join a lobby, but we want to track these events for
+    abuse in the system regardless.
+
+    Arguments:
+        banid: the ban id
+
+    Returned:
+        ref: the added banlog for debug
+    """
+    args, success = require(banid=int)
+
+    if not success:
+        return jsonify({
+            "success": False,
+            "msg": "You must specify a banid for /bans/ping"
+        })
+
+    try:
+        ban = Ban.select().where(Ban.id == args.banid).get()
+    except Ban.DoesNotExist:
+        return jsonify({"success": False, "msg": "Inavlid banid!"})
+
+    id = ban.log({"match": g.server.getActiveMatch()}, BanLogType.BAN_LOG_ATTEMPT, server=g.server.id)
+    return jsonify({"success": True, "ref": id})
+
+@api.route("/servers/register")
+@limit(30)
+def api_servers_register():
+    """
+    Method to register a server session on the backend. This is similar to
+    most major API methods, in that it uses cookieless auth to hit the
+    backend API. The server simply registers with it's id and secret hash,
+    and retrieves a sessionid (limited by IP) that it can use for most requests.
+
+    Arguments:
+        sid: server id
+        shash: server hash
+
+    Returned:
+        sessionid: the sessionid created
+
+    This endpoint is limited to 30 requests per minute to prevent DoS and 
+    brute force attacks.
+    """
+    args, success = require(sid=int, shash=str)
+
+    if not success:
+        return jsonify({
+            "success": False,
+            "msg": "Registering a server requires an id and hash!"
+        })
+
+    try:
+        s = Server.select().where(
+            Server.id == sid &
+            Server.hash == shash &
+            Server.hosts.contains(request.remote_addr)).get()
+        sid = s.createSession()
+    except Server.DoesNotExist:
+        return jsonify({
+            "success": False,
+            "msg": "Invalid server id or hash!"
+        })
+
+    return jsonify({
+        "success": True,
+        "sessionid": sid
+    })
