@@ -46,8 +46,6 @@ SERVER
 /api/servers/list - list active servers PRIVATE!
 
 
-
-
 SERVER WORKFLOW:
 server send /api/servers/register with serverid and serverhash, if these match
  within the database, backend creates a "server session" w/ the source IP
