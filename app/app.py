@@ -1,13 +1,48 @@
 from flask import Flask, g, session, request
+from flask.ext.openid import OpenID
+from steam import getSteamAPI
+
 from views.public import public
 from views.api import api
-from database import User, redis
+from database import User, redis, Session
+from util import flashy, limit
+
+import sys, os, time
 
 app = Flask(__name__)
+oid = OpenID(app)
+steam = getSteamAPI()
 app.secret_key = "change_me"
 
 app.register_blueprint(public)
 app.register_blueprint(api)
+
+@app.route("/login")
+@oid.loginhandler
+@limit(20)
+def login():
+    """
+    Login URL for steam openid, limited to 20 requests a minute
+    """
+    if g.user is not None:
+        return flashy("You are already logged in!")
+    return oid.try_login('http://steamcommunity.com/openid')
+
+@app.route("/logout")
+@limit(20)
+def logout():
+    if g.user:
+        del request.cookies['sid']
+        return flashy("You have been logged out!", "success")
+    return flashy("You are not logged in!")
+
+@oid.after_login
+def create_or_login(resp):
+    match = steam.steam_id_re.search(resp.identity_url)
+    g.user = User.steamGetOrCreate(match.group(1))
+    resp = flashy("Welcome back %s!" % g.user.username, "success")
+    resp.set_cookie("sid", g.user.login(), expires=time.time() + Session.LIFETIME)
+    return resp
 
 @app.before_request
 def beforeRequest():
@@ -17,9 +52,13 @@ def beforeRequest():
     # Normal session
     if request.cookies.get("sid"):
         s = Session.find(request.cookies.get("sid"))
-        if not s:
-            del request.cookies['sid']
-        g.user = User.select().where(User.id == s['user']).get(0)
+        if s:
+            try:
+                g.user = User.select().where(User.id == s['user']).get()
+            except User.DoesNotExist:
+                resp = flashy("Wow! Something really went wrong. Contact support!")
+                resp.set_cookie('sid', '', expires=0)
+                return resp
 
     # Server
     if request.values.get("sid"):

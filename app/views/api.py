@@ -150,7 +150,7 @@ def api_bans_ping():
     except Ban.DoesNotExist:
         return jsonify({"success": False, "msg": "Inavlid banid!"})
 
-    id = ban.log({"match": g.server.getActiveMatch()}, BanLogType.BAN_LOG_ATTEMPT, server=g.server.id)
+    id = ban.log(action=BanLogType.BAN_LOG_ATTEMPT, server=g.server.id)
     return jsonify({"success": True, "ref": id})
 
 @api.route("/servers/register")
@@ -195,4 +195,112 @@ def api_servers_register():
     return jsonify({
         "success": True,
         "sessionid": sid
+    })
+
+@api.route("/stats")
+@limit(60)
+def api_stats():
+    """
+    Method that returns stats on the pug infastructure including server,
+    match and player stats.
+
+    Returned:
+        current:
+            players:
+                search: Players searching for pug
+                playing: Players playing
+            servers:
+                open: Availbile servers
+                used: Servers being used/private
+            matches: current number of matches being played
+
+    This endpoint is limited to 60 requests per minute
+    """
+    return jsonify({
+        "current": {
+            "players": {
+                "searching": 123,
+                "playing": 300
+            },
+            "servers": {
+                "open": 5,
+                "used": 22,
+            },
+            "matches": 38
+        }
+    })
+
+@api.route("/lobby/create", methods=['POST'])
+@authed()
+def api_lobby_create():
+    lobby = Lobby.getNew(g.user)
+    data = lobby.format()
+    data['success'] = True
+    return jsonify(data)
+
+@api.route("/lobby/poll")
+@authed()
+def api_lobby_poll():
+    args, success = require(id=int, last=int)
+
+    if not args.id:
+        return jsonify({
+            "success": False,
+            "msg": "Polling lobbies requires a lobby id!"
+        })
+
+    try:
+        lobby = Lobby.select().where(Lobby.id == args.id).get()
+    except Lobby.DoesNotExist:
+        return jsonify({
+            "success": False,
+            "msg": "No lobby with that id exists!"
+        })
+
+    if not g.user.id in lobby.members:
+        return jsonify({
+            "success": False,
+            "msg": "You do not have permission to poll that lobby!"
+        })
+
+    last = args.last or 0
+    data = lobby_notes.get(lobby.id, last)
+    return jsonify({
+        "success": True,
+        "size": len(data),
+        "data": data
+    })
+
+@api.route("/lobby/chat")
+@authed()
+def api_lobby_chat():
+    args, success = require(id=int, msg=str)
+
+    if args.id == None:
+        return jsonify({
+            "success": False,
+            "msg": "Chatting lobbies requires a lobby id!"
+        })
+
+    try:
+        lobby = Lobby.select().where(Lobby.id == args.id).get()
+    except Lobby.DoesNotExist:
+        return jsonify({
+            "success": False,
+            "msg": "No lobby with that id exists!"
+        })
+
+    if not g.user.id in lobby.members:
+        return jsonify({
+            "success": False,
+            "msg": "You do not have permission to chat that lobby!"
+        })
+
+    lobby_notes.push(lobby.id, {
+        "type": "chat",
+        "from": g.user.username,
+        "msg": args.msg
+    })
+    return jsonify({
+        "success": True
     })

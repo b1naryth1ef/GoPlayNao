@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container" style="fixed-header">
+    <div class="page-header">
+        <div class="page-title">
+            <h3>Lobby {% if not lobby %}Creator{% endif %}</h3> 
+            {% if not lobby %}
+                <span>Create a lobby, invite your friends, and play!</span>
+            {% endif %}
+        </div>
+        <ul class="page-stats">
+            <li>
+                <div class="summary"> 
+                    <span>Players Searching </span> <h3 class="apistats" id="current.players.searching">...</h3> 
+                </div> 
+            </li>
+            <li>
+                <div class="summary"> 
+                    <span>Availibile Servers </span> <h3 class="apistats" id="current.servers.open">...</h3> 
+                </div> 
+            </li>
+            <li>
+                <div class="summary"> 
+                    <span>Live Matches </span> <h3 class="apistats" id="current.matches">...</h3> 
+                </div> 
+            </li>
+            <li>
+                <div class="summary"> 
+                    <span>Players Pugging </span> <h3 class="apistats" id="current.players.playing">...</h3> 
+                </div> 
+            </li>
+        </ul>
+    </div>
+{# This only gets shown when we are creating a new lobby #}
+<div class="row" id='lobby-maker'>
+    <div class="col-md-12">
+        <div class="widget box">
+            <div id='lobby-maker-main' class="widget-content">
+                
+                <div id="lobby-create-loader" style="text-align: center; display: none;">
+                    <h4>Creating Lobby...</h4>
+                    <div class="progress progress-striped active"> <div class="progress-bar" style="width: 100%"></div> </div>
+                </div>
+                <div id="lobby-create-wizard">
+                    <h1>Lobby Maker</h1>
+                    <p>
+                        Whoops, looks like B1n hasn't added any awesome/kick-ass options for lobby creation yet!
+                    </p>
+                    <button id="btn-create-lobby" class="btn btn-success btn-large">Create Lobby</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# This gets shown when we're in a lobby #}
+<div id="lobby">
+    <div class="row" id="lobby-info">
+        <div class="col-md-12">
+            <div class="widget box">
+                <div id='lobby-info-main' class="widget-content">
+                    <h3 style="text-align: center;">Searching...</h3>
+                    <div class="progress progress-striped active"> <div class="progress-bar" style="width: 100%"></div> </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row" id="lobby-content">
+        <div class="col-md-10">
+            <div class="widget box">
+                <div id='lobby-chat' class="widget-content">
+                    <div class="list-group" id="lobby-chat-list">
+                        <li class="list-group-item basic-alert"><b>neeko:</b> I like cock!</li>
+                        <li class="list-group-item basic-alert"><b>u4ic:</b> me 2!!!!! omg no wai</li>
+                    </div>
+                     <li class="list-group-item basic-alert" id="lobby-chat-input"><div class="input-group"> <input type="text" id="lobby-chat-text" class="form-control"> <span class="input-group-btn"> <button id="lobby-chat-send" class="btn btn-success" type="button">Send!</button> </span> </div></li>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="widget box">
+                <div id="lobby-list" class="widget-content">
+                    <table class="table table-hover">
+                        <tbody>
+                            <tr class="info"><td>B1NZYFAG</td></tr>
+                            <tr><td>u4ic</td></tr>
+                            <tr><td>neeko</td></tr>
+                            <tr><td>lilt</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function () {
+    pug.lobby({% if lobby %}{{ lobby }}{% endif %});
+});
+</script>
+{% endblock %}

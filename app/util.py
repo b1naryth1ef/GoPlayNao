@@ -3,7 +3,7 @@ from database import Session, redis
 from functools import wraps
 from dateutil.relativedelta import relativedelta
 
-def flashy(m, f="error", u="/"):
+def flashy(m, f="danger", u="/"):
     flash(m, f)
     return redirect(u)
 
@@ -31,7 +31,7 @@ def authed(level=0, err=None):
         @wraps(f)
         def _f(*args, **kwargs):
             if not g.user:
-                return err() if err else "Error!", 400
+                return err() if err else flashy("You must be logged in for that!")
             return f(*args, **kwargs)
         return _f
     return deco
@@ -70,3 +70,6 @@ def limit(per_minute):
 
 attrs = ['years', 'months', 'days', 'hours', 'minutes', 'seconds']
 human_readable = lambda delta: ['%d %s' % (getattr(delta, attr), getattr(delta, attr) > 1 and attr or attr[:-1]) for attr in attrs if getattr(delta, attr)]
+
+MAPS = ["ns2_summit", "ns2_tram", "ns2_mineshaft", "ns2_docking", "ns2_veil",
+"ns2_refinery", "ns2_biodome", "ns2_eclipse"]
