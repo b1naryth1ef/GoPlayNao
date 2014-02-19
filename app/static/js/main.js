@@ -29,7 +29,48 @@ var pug = {
         $("."+cls).remove();
     },
 
+    vglobal: function() {
+        var search_base = _.template('<li class="search-result"><a href="/user/<%= u.username %>"><div class="col-left">'+
+                        '<span class="label label-info"><i class="icon-star"></i></span>'+
+                        '</div><div class="col-right with-margin">'+
+                        '<span class="message"><strong><%= u.username %></strong></span>'+
+                        '<span class="time">32 Pugs Played</span></div></a> </li>')
+        var search = function() {
+            $(".search-result").remove()
+            $.ajax("/api/users/search", {
+                type: "POST",
+                data: {
+                    query: $("#search-input").val()
+                },
+                success: function (data) {
+                    $(".sidebar-search-results").slideDown(200);
+                    if (data.success) {
+                        for (eid in data.results) {
+                            $("#search-results").append(search_base({u: data.results[eid]}))
+                        }
+                    }
+                }
+            })
+        }
+
+        $('#search-submit').click(function(e) {
+            e.preventDefault()
+            search()
+        })
+        $('#search-input').keypress(function(e) {
+            if(e.which == 13) {
+                e.preventDefault();
+                search()
+            }
+        });
+
+        $(".sidebar-search-results .close").click(function () {
+            $(".sidebar-search-results").slideUp(200)
+        });
+    },
+
     lobby: function (id) {
+        pug.vglobal();
         this.runGetStats();
         if (id) {
             this.lobbyJoin(id);
@@ -41,7 +82,7 @@ var pug = {
 
     createLobby: function(e) {
         // This should never happen unless people are firing manual events
-        if (pug.id) {
+        if (pug.lobbyid) {
             console.log("Wat. Da. Faq?");
             alert("Something went wrong! (Refresh the page?)");
             return
@@ -248,6 +289,9 @@ var pug = {
                             pug.lobbyAddAction(m.msg, "warning", !first);
                         } else if (m.type == "msg") {
                             pug.lobbyAddAction(m.msg, "danger", !first);
+                        } else if (m.type == "timeout") {
+                            pug.lobbyRmvMember(m.member.id);
+                            pug.lobbyAddAction(m.msg, "danger", !first);
                         }
                     }
 
@@ -277,6 +321,59 @@ var pug = {
                 })
             }
         })
+    },
+
+    friends: function() {
+        pug.vglobal();
+        $(".friends-unfriend").click(function (e) {
+            console.log($($(this).parent()).attr("id"))
+            console.log($(this))
+            $.ajax("/api/users/unfriend", {
+                type: "POST",
+                data: {
+                    id: $(this).attr("id")
+                },
+                success: function (data) {
+                    if (data.success) {
+                        // FIXME
+                        $($(this).parent()).remove()
+                        pug.msg("Removed friend!", "success", "#friends-main", true)
+                    }
+                }
+            });
+        });
+
+        $(".friends-deny").click(function (e) {
+            $.ajax("/api/invites/deny", {
+                type: "POST",
+                data: {
+                    id: $(this).attr("id")
+                },
+                success: function (data) {
+                    if (dat.success) {
+                        // FIXME
+                        $($(this).parent()).remove()
+                        pug.msg("Denied Friend Invite!", "warning", "#friends-main", true)
+                    }
+                }
+            })
+        });
+
+        $(".friends-accept").click(function (e) {
+            $.ajax("/api/invites/accept", {
+                type: "POST",
+                data: {
+                    id: $(this).attr("id")
+                },
+                success: function (data) {
+                    if (dat.success) {
+                        // FIXME
+                        $($(this).parent()).remove()
+                        pug.msg("Accepted Friend Invite!", "success", "#friends-main", true)
+                    }
+                }
+            })
+        });
     }
 }
 

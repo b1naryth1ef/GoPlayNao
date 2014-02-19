@@ -1,12 +1,12 @@
 "use strict";
 $(document).ready(function () {
-    $(".sidebar-search").submit(function (a) {
-        $(".sidebar-search-results").slideDown(200);
-        return false
-    });
-    $(".sidebar-search-results .close").click(function () {
-        $(".sidebar-search-results").slideUp(200)
-    });
+    // $(".sidebar-search").submit(function (a) {
+    //     $(".sidebar-search-results").slideDown(200);
+    //     return false
+    // });
+    // $(".sidebar-search-results .close").click(function () {
+    //     $(".sidebar-search-results").slideUp(200)
+    // });
     $(".row-bg-toggle").click(function (a) {
         a.preventDefault();
         $(".row.row-bg").each(function () {

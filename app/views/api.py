@@ -341,9 +341,11 @@ def api_lobby_action():
         })
 
     if args.action == "leave":
+        lobby.stopQueue()
         pass
 
     if args.action == "join":
+        lobby.stopQueue()
         pass
 
     if lobby.owner != g.user:
@@ -376,3 +378,126 @@ def api_lobby_action():
             return jsonify({"success": True})
         else:
             return jsonify({"success": False, "msg": "Lobby Not Queued!"})
+
+@api.route("/users/search", methods=["POST"])
+@authed()
+def api_users_search():
+    args, success = require(query=str)
+
+    if not success:
+        return jsonify({
+            "success": False,
+            "msg": "You must give a query to search!"
+        })
+
+    u = User.select().where(User.username ** (args.query)).limit(25)
+
+    return jsonify({
+        "success": True,
+        "results": [i.format() for i in u]
+    })
+
+@api.route("/users/friend", methods=['POST'])
+@authed()
+def api_users_friend():
+    args, success = require(id=int)
+
+    if not success:
+        return jsonify({
+            "success": False,
+            "msg": "You must give a user id to friend a user!"
+        })
+
+    try:
+        u = User.select().where(User.id == args.id).get()
+    except User.DoesNotExist:
+        return jsonify({
+            "success": False,
+            "msg": "No user with that id!"
+        })
+
+    if Invite.select().where(
+        (Invite.invitetype == InviteType.INVITE_TYPE_FRIEND) &
+        (Invite.from_user == g.user) &
+        (Invite.to_user == u)).count():
+        return jsonify({
+            "success": False,
+            "msg": "You've already invited this user to be your friend!"
+        })
+
+    if u.isFriendsWith(g.user):
+        return jsonify({
+            "success": False,
+            "msg": "Already friends with that user!"
+        })
+
+    g.user.friendRequest(u)
+    return jsonify({"success": True})
+
+@api.route("/users/unfriend", methods=['POST'])
+@authed()
+def api_users_unfriend():
+    args, success = require(id=int)
+
+    if not success:
+        return jsonify({
+            "success": False,
+            "msg": "You must give a friendship id to unfriend a user!"
+        })
+
+    try:
+        f = Friendship.select().where(Friendship.id == args.id).get()
+    except Friendship.DoesNotExist:
+        return jsonify({
+            "success": False,
+            "msg": "Invalid Friendship ID!"
+        })
+
+    f.delete().execute()
+    return jsonify({"success": True})
+
+@api.route("/invites/accept", methods=['POST'])
+@authed()
+def api_invites_accept():
+    args, success = require(id=int)
+
+    if not success:
+        return jsonify({
+            "success": False,
+            "msg": "You must give an invite id to accept an invite!"
+        })
+
+    try:
+        i = Invite.select().where(Invite.id == args.id).get()
+    except Invite.DoesNotExist:
+        return jsonify({
+            "success": False,
+            "msg": "Invalid invite ID!"
+        })
+
+    if i.invitetype == InviteType.INVITE_TYPE_FRIEND:
+        Friendship.create(g.user, i.to_user, i)
+        i.delete().execute()
+        return jsonify({"success": True})
+
+@api.route("/invites/deny", methods=['POST'])
+@authed()
+def api_invites_deny():
+    args, success = require(id=int)
+
+    if not success:
+        return jsonify({
+            "success": False,
+            "msg": "You must give an invite id to reject an invite!"
+        })
+
+    try:
+        i = Invite.select().where(Invite.id == args.id).get()
+    except Invite.DoesNotExist:
+        return jsonify({
+            "success": False,
+            "msg": "Invalid invite ID!"
+        })
+
+    i.delete().execute()
+    return jsonify({"success": True})

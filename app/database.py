@@ -60,6 +60,22 @@ class User(BaseModel):
             "username": self.username
         }
 
+    def getFriendsQuery(self, user):
+        return Friendship.select().where(
+            (((Friendship.usera == user) & (Friendship.userb == self)) |
+            ((Friendship.usera == self) & (Friendship.userb == user)))
+            & Friendship.active == True)
+
+    def isFriendsWith(self, user):
+        return bool(self.getFriendsQuery(user).count())
+
+    def friendRequest(self, user):
+        i = Invite()
+        i.from_user = self
+        i.to_user = user
+        i.invitetype = InviteType.INVITE_TYPE_FRIEND
+        i.save()
+
 class Ban(BaseModel):
     user = ForeignKeyField(User, null=True)
     steamid = IntegerField(null=True)
@@ -167,7 +183,7 @@ class Lobby(BaseModel):
         if self.owner == user:
             return True
 
-        for i in Invite.select().where(Invite.ref == self.id & Invite.to_user == user):
+        for i in Invite.select().where((Invite.ref == self.id) & (Invite.to_user == user)):
             if i.valid():
                 return True
 
@@ -227,6 +243,7 @@ class Lobby(BaseModel):
         return map(json.loads, redis.lrange("action:lobby:%s" % self.id, start, -1))
 
     def startQueue(self):
+        if self.state == LobbyState.LOBBY_STATE_SEARCH: return
         self.state = LobbyState.LOBBY_STATE_SEARCH
         self.save()
         self.sendAction({
@@ -236,6 +253,7 @@ class Lobby(BaseModel):
         })
 
     def stopQueue(self):
+        if self.state == LobbyState.LOBBY_STATE_IDLE: return
         self.state = LobbyState.LOBBY_STATE_IDLE
         self.save()
         self.sendAction({
@@ -261,7 +279,7 @@ class Invite(BaseModel):
     from_user = ForeignKeyField(User, related_name="invites_from")
     to_user = ForeignKeyField(User, related_name="invites_to")
     invitetype = IntegerField()
-    ref = IntegerField()
+    ref = IntegerField(null=True)
     created = DateTimeField(default=datetime.utcnow)
     duration = IntegerField(default=0)
 
@@ -281,6 +299,41 @@ class Invite(BaseModel):
         self.save()
         return self
 
+    def format(self):
+        return {
+            "id": self.id,
+            "from": self.from_user.format(),
+            "to": self.to_user.format(),
+            "type": self.invitetype,
+            "ref": self.ref,
+        }
+
+class Friendship(BaseModel):
+    usera = ForeignKeyField(User, related_name="friendshipa")
+    userb = ForeignKeyField(User, related_name="friendshipb")
+    #invite = ForeignKeyField(Invite, null=True)
+    active = BooleanField(default=True)
+
+    @classmethod
+    def create(cls, a, b, invite=None):
+        self = cls()
+        self.usera = a
+        self.userb = b
+        #self.invite = invite
+        self.save()
+        return self
+
+    def format(self):
+        return {
+            "usera": self.usera.format(),
+            "userb": self.userb.format(),
+            #"invite": self.invite.format() if self.invite else {},
+            "active": self.active,
+        }
+
+    def getNot(self, u):
+        return self.usera if self.usera != u else self.userb
+
 class Session(object):
     db = redis
 
@@ -296,7 +349,7 @@ class Session(object):
         cls.db.set("us:%s" % id, json.dumps(
             {
                 "user": user.id,
-                #"time": datetime.utcnow(),
+                "time": time.time(),
                 "ip": source_ip,
             }))
         cls.db.expire("us:%s" % id, cls.LIFETIME)
@@ -314,24 +367,14 @@ class Session(object):
     def expire(cls, id):
         return cls.db.delete("us:%s" % id)
 
-# class Notifications(object):
-#     def __init__(self, entity, single=False):
-#         self.key = "{}:%s".format(entity)
-#         self.single = single
-
-#     def push(self, id, msg):
-#         redis.rpush(self.key % id, json.dumps(msg))
-
-#     def get(self, id, start=0, load=True):
-#         data = redis.lrange(self.key % id, start, -1)
-#         if load: data = map(json.loads, data)
-#         if self.single: redis.delete(self.key % id)
-#         return data
-
-# lobby_notes = Notifications("lobby")
-# user_notes = Notifications("user", True)
 
 if __name__ == "__main__":
-    for table in [User, Server, Ban, BanLog, Lobby, Invite]:
+    for table in [User, Server, Ban, BanLog, Lobby, Invite, Friendship]:
         table.drop_table(True, cascade=True)
         table.create_table(True)
+
+    u = User()
+    u.username = "test"
+    u.steamid = 1337
+    u.save()
+    print "Test User: %s" % u.id

@@ -58,7 +58,8 @@ def limit(per_minute):
                 # TODO: this could be used as a DoS attack by filling up
                 #  redis. Maybe add global rate limiting?
                 k = "rl:%s_%s" % (f.__name__, request.remote_addr)
-                if not redis.exists(k):
+                if not redis.exists(k) or not redis.ttl(k):
+                    redis.delete(k)
                     redis.setex(k, 1, 60)
                     return f(*args, **kwargs)
                 if int(redis.get(k)) > per_minute:
