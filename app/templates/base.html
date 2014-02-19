@@ -52,6 +52,16 @@
     <script>$(document).ready(function(){App.init();Plugins.init();FormComponents.init()});</script> 
     <script type="text/javascript" src="/static/js/custom.js"></script> 
     <script type="text/javascript" src="/static/js/demo/pages_calendar.js"></script> 
+
+    <script>
+    // FUCK IT YOLO
+    USER = {}
+    {% if g.user %}
+        USER.id = {{ g.user.id }}
+        USER.name = "{{ g.user.username }}"
+        USER.steamid = {{ g.user.steamid }}
+    {% endif %}
+    </script>
 </head>
 <body class="theme-dark"> 
     <header class="header navbar navbar-fixed-top" role="banner"> 

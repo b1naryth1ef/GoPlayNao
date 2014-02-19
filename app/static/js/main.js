@@ -1,3 +1,11 @@
+var LobbyState = {
+    LOBBY_STATE_CREATE: 1,
+    LOBBY_STATE_IDLE: 2,
+    LOBBY_STATE_SEARCH: 3,
+    LOBBY_STATE_PLAY: 4,
+    LOBBY_STATE_UNUSED: 5
+}
+
 var pug = {
     lobbyid: null,
     lobbypoll: 0,
@@ -23,7 +31,7 @@ var pug = {
     lobby: function (id) {
         this.runGetStats();
         if (id) {
-            this.joinLobby(id);
+            this.lobbyJoin(id);
         } else {
             $("#lobby").hide();
             $("#btn-create-lobby").click(this.createLobby);
@@ -70,66 +78,127 @@ var pug = {
                 pug.lobbyid = data.id;
 
                 pug.pushurl(window.location+"/"+data.id)
-                pug.renderLobby();
+                pug.lobbyRender(data);
             },
             error: error
         })
     },
 
-    lobbyPollStart: function() {
-        clearTimeout(this.pollLobby);
-        setTimeout(this.pollLobby, 1000 * 5);
-        this.pollLobby()
+    lobbyPollStart: function(first) {
+        clearInterval(pug.pollLobby);
+        setInterval(pug.pollLobby, 1000 * 5);
+        pug.pollLobby(first)
     },
 
-    joinLobby: function(id) {
+    lobbyJoin: function(id) {
         if (!pug.lobbyid) {
-            pug.lobbyid = id
-            // TODO: join lobby
+            pug.lobbyid = id;
         }
-        pug.lobbyPollStart()
-        pug.renderLobby();
+        pug.lobbyPollStart(true);
+
+        $.ajax("/api/lobby/info", {
+            data: {
+                id: pug.lobbyid
+            },
+            success: pug.lobbyRender
+        });
         
     },
 
-    renderLobby: function() {
+    lobbyRender: function(data) {
         $("#lobby-maker").hide();
         $("#lobby").show();
         $("#lobby-chat-list").slimScroll({
             height: '350px',
             start: 'bottom',
         });
-        $("#lobby-chat-send").click()
-        var send_lobby_chat = function () {
-            $.ajax("/api/lobby/chat", {
+
+        if (data.owner != USER.id) {
+            $(".not-owner").show()
+        } else {
+            $(".owner").show()
+        }
+
+        $("#lobby-queue-start").click(function () {
+            $.ajax("/api/lobby/action", {
+                type: "POST",
                 data: {
                     id: pug.lobbyid,
-                    msg: $("#lobby-chat-text").val()
+                    action: "start"
+                },
+                success: pug.lobbyPollStart
+            })
+        });
+        $("#lobby-queue-stop").click(function () {
+            $.ajax("/api/lobby/action", {
+                type: "POST",
+                data: {
+                    id: pug.lobbyid,
+                    action: "stop"
+                },
+                success: pug.lobbyPollStart
+            })
+        });
+
+        // The following handles sending chat messages
+        var send_lobby_chat = function () {
+            var msg = $("#lobby-chat-text").val();
+            $.ajax("/api/lobby/chat", {
+                type: "POST",
+                data: {
+                    id: pug.lobbyid,
+                    msg: msg
                 },
                 success: function(data) {
                     if (data.success) {
                         $("#lobby-chat-text").val("");
-                        // FIXME
-                        pug.lobbyPollStart()
+                        pug.lobbyAddChat(USER.name, msg, true)
                     } else {
                         console.log(data.msg)
                     }
                 }
             })
         }
+        // Bind send button
         $("#lobby-chat-send").click(send_lobby_chat)
+        // Bind the enter key
         $('#lobby-chat-text').keypress(function(e) {
             if(e.which == 13) {
                 send_lobby_chat();
             }
         });
+        pug.lobbyHandleState(data.state)
     },
 
-    lobbyAddChat: function(from, msg) {
+    lobbyHandleState: function(state) {
+        console.log(state)
+        switch (state) {
+            case LobbyState.LOBBY_STATE_CREATE:
+            case LobbyState.LOBBY_STATE_IDLE:
+            case LobbyState.LOBBY_STATE_UNUSED:
+                $("#lobby-info-main-queued").hide();
+                $("#lobby-info-main-waiting").show();
+                break;
+            case LobbyState.LOBBY_STATE_SEARCH:
+                $("#lobby-info-main-queued").show();
+                $("#lobby-info-main-waiting").hide();
+                break;
+        }
+    },
+
+    // TODO: injection
+    lobbyAddChat: function(from, msg, adjust) {
         $("#lobby-chat-list").append('<li class="list-group-item basic-alert"><b>'+from+':</b> '+msg+'</li>')
+        if (adjust) { $("#lobby-chat-list").animate({ scrollTop: $('#lobby-chat-list')[0].scrollHeight}, 700);}
     },
 
-    pollLobby: function() {
+    lobbyAddAction: function(text, color, adjust) {
+        var extra = color ? ' class="text-'+color+'" ' : ''
+        $("#lobby-chat-list").append('<li class="list-group-item basic-alert"><i'+extra+'>'+text+'</i></li>')
+        if (adjust) { $("#lobby-chat-list").animate({ scrollTop: $('#lobby-chat-list')[0].scrollHeight}, 700);}
+    },
+
+    pollLobby: function(first) {
         $.ajax("/api/lobby/poll", {
             data: {
                 id: pug.lobbyid,
@@ -141,10 +210,19 @@ var pug = {
 
                     for (mi in data.data) {
                         m = data.data[mi]
-                        if (m.type === "chat") {
+                        if (m.type === "chat" && (m.id != USER.id || first)) {
                             pug.lobbyAddChat(m.from, m.msg)
+                        } else if (m.type === "join" || m.type === "quit") {
+                            pug.lobbyAddAction(m.msg, "success", !first)
+                            // TODO: add/remove to/from sidebar
+                        } else if (m.type == "state") {
+                            pug.lobbyHandleState(m.state)
+                        } else if (m.type == "msg") {
+                            pug.lobbyAddAction(m.msg, "danger", !first)
                         }
                     }
+
+                    if (first) { $("#lobby-chat-list").animate({ scrollTop: $('#lobby-chat-list')[0].scrollHeight}, 700);}
                 }
             }
         })

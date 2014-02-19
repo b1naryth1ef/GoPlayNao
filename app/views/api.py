@@ -233,24 +233,26 @@ def api_stats():
 @api.route("/lobby/create", methods=['POST'])
 @authed()
 def api_lobby_create():
+    """
+    Creates a lobby
+    """
     lobby = Lobby.getNew(g.user)
     data = lobby.format()
     data['success'] = True
     return jsonify(data)
 
-@api.route("/lobby/poll")
-@authed()
-def api_lobby_poll():
-    args, success = require(id=int, last=int)
-
-    if not args.id:
+def pre_lobby(id):
+    """
+    Helper function for lobby-related endpoints
+    """
+    if id == None:
         return jsonify({
             "success": False,
-            "msg": "Polling lobbies requires a lobby id!"
+            "msg": "Endpoint requires a lobby id!"
         })
 
     try:
-        lobby = Lobby.select().where(Lobby.id == args.id).get()
+        lobby = Lobby.select().where(Lobby.id == id).get()
     except Lobby.DoesNotExist:
         return jsonify({
             "success": False,
@@ -260,47 +262,115 @@ def api_lobby_poll():
     if not g.user.id in lobby.members:
         return jsonify({
             "success": False,
-            "msg": "You do not have permission to poll that lobby!"
+            "msg": "You do not have permission to that lobby!"
         })
+    return lobby
 
-    last = args.last or 0
-    data = lobby_notes.get(lobby.id, last)
+@api.route("/lobby/info")
+@authed()
+def api_lobby_info():
+    args, _ = require(id=int)
+
+    lobby = pre_lobby(args.id)
+    if not isinstance(lobby, Lobby):
+        return lobby
+
+    return jsonify(lobby.format())
+
+@api.route("/lobby/poll")
+@authed()
+def api_lobby_poll():
+    args, _ = require(id=int, last=int)
+
+    lobby = pre_lobby(args.id)
+    if not isinstance(lobby, Lobby):
+        return lobby
+
+    data = lobby.poll(args.last or 0)
     return jsonify({
         "success": True,
         "size": len(data),
         "data": data
     })
 
-@api.route("/lobby/chat")
+@api.route("/lobby/chat", methods=['POST'])
 @authed()
 def api_lobby_chat():
     args, success = require(id=int, msg=str)
 
-    if args.id == None:
+    if not success:
         return jsonify({
             "success": False,
-            "msg": "Chatting lobbies requires a lobby id!"
+            "msg": "Lobby chat expects both a lobby id and a message!"
         })
 
-    try:
-        lobby = Lobby.select().where(Lobby.id == args.id).get()
-    except Lobby.DoesNotExist:
+    lobby = pre_lobby(args.id)
+    if not isinstance(lobby, Lobby):
+        return lobby
+
+    if not args.msg.strip():
         return jsonify({
-            "success": False,
-            "msg": "No lobby with that id exists!"
+            "succcess": False,
+            "msg": "Lobby chat messages must contain something!"
         })
 
-    if not g.user.id in lobby.members:
-        return jsonify({
-            "success": False,
-            "msg": "You do not have permission to chat that lobby!"
-        })
-
-    lobby_notes.push(lobby.id, {
-        "type": "chat",
-        "from": g.user.username,
-        "msg": args.msg
-    })
+    lobby.sendChat(g.user, args.msg)
     return jsonify({
         "success": True
     })
+
+@api.route("/lobby/action", methods=['POST'])
+@authed()
+def api_lobby_action():
+    args, success = require(id=int, action=str)
+
+    if not success:
+        return jsonify({
+            "success": False,
+            "msg": "Lobby action expects lobby id and action!"
+        })
+
+    lobby = pre_lobby(args.id)
+    if not isinstance(lobby, Lobby):
+        return lobby
+
+    if args.action not in ['leave', 'join', 'edit', 'start', 'stop']:
+        return jsonify({
+            "success": False,
+            "msg": "Invalid lobby action `%s`!" % args.action
+        })
+
+    if args.action == "leave":
+        pass
+
+    if args.action == "join":
+        pass
+
+    if lobby.owner != g.user:
+        return jsonify({
+            "success": False,
+            "msg": "You must be the lobby owner to modify the lobby!"
+        })
+
+    if args.action == "start":
+        errors = ["Joe"]
+        for member in lobby.members:
+            u = User.select().where(User.id == member).get()
+            if not u.canPlay():
+                errors.append(u.username)
+        word = "they have" if len(errors) > 1 else "has an"
+        word2 = "bans" if len(errors) > 1 else "ban"
+        lobby.sendAction({"type": "msg", "msg": "%s cannot queue, %s active %s!" % (', '.join(errors), word, word2)})
+        return jsonify({"success": False, "msg": "%s users in the lobby cannot play!" % len(errors)})
+
+        if lobby.state in [LobbyState.LOBBY_STATE_CREATE, LobbyState.LOBBY_STATE_IDLE]:
+            lobby.startQueue()
+            return jsonify({"success": True})
+        else:
+            return jsonify({"success": False, "msg": "Lobby Already Queued"})
+    if args.action == "stop":
+        if lobby.state in [LobbyState.LOBBY_STATE_SEARCH]:
+            lobby.stopQueue()
+            return jsonify({"success": True})
+        else:
+            return jsonify({"success": False, "msg": "Lobby Not Queued!"})

@@ -50,6 +50,9 @@ class User(BaseModel):
     def isValid(self):
         return self.active and self.level >= 0
 
+    def canPlay(self):
+        return True
+
 class Ban(BaseModel):
     user = ForeignKeyField(User, null=True)
     steamid = IntegerField(null=True)
@@ -193,10 +196,44 @@ class Lobby(BaseModel):
             "id": self.id,
             "state": self.state,
             "members": self.members,
+            "owner": self.owner.id
         }
         if tiny: return base
         base['config'] = self.config
         return base
+
+    def sendChat(self, user, msg):
+        self.sendAction({
+            "msg": msg,
+            "from": user.username,
+            "id": user.id,
+            "type": "chat"
+        })
+
+    def sendAction(self, action):
+        redis.rpush("action:lobby:%s" % self.id, json.dumps(action))
+
+    def poll(self, start):
+        return map(json.loads, redis.lrange("action:lobby:%s" % self.id, start, -1))
+
+    def startQueue(self):
+        self.state = LobbyState.LOBBY_STATE_SEARCH
+        self.save()
+        self.sendAction({
+            "type": "state",
+            "state": self.state
+        })
+
+    def stopQueue(self):
+        self.state = LobbyState.LOBBY_STATE_IDLE
+        self.save()
+        self.sendAction({
+            "type": "state",
+            "state": self.state
+        })
+
+class Notification(BaseModel):
+    data = JSONField()
 
 class InviteType(object):
     INVITE_TYPE_LOBBY = 1
@@ -261,22 +298,22 @@ class Session(object):
     def expire(cls, id):
         return cls.db.delete("us:%s" % id)
 
-class Notifications(object):
-    def __init__(self, entity, single=False):
-        self.key = "{}:%s".format(entity)
-        self.single = single
+# class Notifications(object):
+#     def __init__(self, entity, single=False):
+#         self.key = "{}:%s".format(entity)
+#         self.single = single
 
-    def push(self, id, msg):
-        redis.rpush(self.key % id, json.dumps(msg))
+#     def push(self, id, msg):
+#         redis.rpush(self.key % id, json.dumps(msg))
 
-    def get(self, id, start=0, load=True):
-        data = redis.lrange(self.key % id, start, -1)
-        if load: data = map(json.loads, data)
-        if self.single: redis.delete(self.key % id)
-        return data
+#     def get(self, id, start=0, load=True):
+#         data = redis.lrange(self.key % id, start, -1)
+#         if load: data = map(json.loads, data)
+#         if self.single: redis.delete(self.key % id)
+#         return data
 
-lobby_notes = Notifications("lobby")
-user_notes = Notifications("user", True)
+# lobby_notes = Notifications("lobby")
+# user_notes = Notifications("user", True)
 
 if __name__ == "__main__":
     for table in [User, Server, Ban, BanLog, Lobby, Invite]:
