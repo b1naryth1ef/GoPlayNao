@@ -96,7 +96,8 @@ var pug = {
         $("#lobby-maker").hide();
         $("#lobby").show();
         $("#lobby-chat-list").slimScroll({
-            height: '350px'
+            height: '350px',
+            start: 'bottom',
         });
         $("#lobby-chat-send").click()
         var send_lobby_chat = function () {
