@@ -71,16 +71,16 @@ var pug = {
 
     lobby: function (id) {
         pug.vglobal();
-        this.runGetStats();
+        pug.runGetStats();
         if (id) {
-            this.lobbyJoin(id);
+            pug.lobbyJoin(id);
         } else {
             $("#lobby").hide();
-            $("#btn-create-lobby").click(this.createLobby);
+            $("#btn-create-lobby").click(pug.lobbyCreate);
         }
     },
 
-    createLobby: function(e) {
+    lobbyCreate: function(e) {
         // This should never happen unless people are firing manual events
         if (pug.lobbyid) {
             console.log("Wat. Da. Faq?");
