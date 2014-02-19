@@ -237,6 +237,10 @@ var pug = {
             }
         });
         pug.lobbyHandleState(data.state)
+
+        $("#lobby-invite-btn").click(function () {
+            $("#invite-modal").modal('show')
+        })
     },
 
     lobbyHandleState: function(state) {
