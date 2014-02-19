@@ -1,9 +1,9 @@
 from peewee import *
 from playhouse.postgres_ext import *
 from datetime import *
-from flask import request
+from flask import request, g
 from steam import getSteamAPI
-import bcrypt, json, redis, random, string
+import bcrypt, json, redis, random, string, time
 
 db = PostgresqlExtDatabase('ns2pug', user="b1n", password="b1n", threadlocals=True)
 redis = redis.Redis()
@@ -52,6 +52,13 @@ class User(BaseModel):
 
     def canPlay(self):
         return True
+
+    def format(self):
+        return {
+            "id": self.id,
+            "steamid": self.steamid,
+            "username": self.username
+        }
 
 class Ban(BaseModel):
     user = ForeignKeyField(User, null=True)
@@ -191,11 +198,11 @@ class Lobby(BaseModel):
         self.save()
         return self
 
-    def format(self, tiny=False):
+    def format(self, tiny=True):
         base = {
             "id": self.id,
             "state": self.state,
-            "members": self.members,
+            "members": [User.select().where(User.id == i).get().format() for i in self.members],
             "owner": self.owner.id
         }
         if tiny: return base
@@ -212,8 +219,11 @@ class Lobby(BaseModel):
 
     def sendAction(self, action):
         redis.rpush("action:lobby:%s" % self.id, json.dumps(action))
+        if redis.llen("action:lobby:%s" % self.id) > 250:
+            redis.lpop("action:lobby:%s" % self.id)
 
     def poll(self, start):
+        redis.set("lobby:ping:%s:%s" % (self.id, g.user.id), time.time())
         return map(json.loads, redis.lrange("action:lobby:%s" % self.id, start, -1))
 
     def startQueue(self):
@@ -221,7 +231,8 @@ class Lobby(BaseModel):
         self.save()
         self.sendAction({
             "type": "state",
-            "state": self.state
+            "state": self.state,
+            "msg": "Queue started"
         })
 
     def stopQueue(self):
@@ -229,8 +240,13 @@ class Lobby(BaseModel):
         self.save()
         self.sendAction({
             "type": "state",
-            "state": self.state
+            "state": self.state,
+            "msg": "Queue stopped"
         })
+
+    def cleanup(self):
+        redis.delete("lobby:ping:%s:*" % self.id)
+        redis.delete("action:lobby:%s" % self.id)
 
 class Notification(BaseModel):
     data = JSONField()

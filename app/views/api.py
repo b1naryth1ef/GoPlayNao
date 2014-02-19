@@ -353,15 +353,17 @@ def api_lobby_action():
         })
 
     if args.action == "start":
-        errors = ["Joe"]
+        errors = []
         for member in lobby.members:
             u = User.select().where(User.id == member).get()
             if not u.canPlay():
                 errors.append(u.username)
-        word = "they have" if len(errors) > 1 else "has an"
-        word2 = "bans" if len(errors) > 1 else "ban"
-        lobby.sendAction({"type": "msg", "msg": "%s cannot queue, %s active %s!" % (', '.join(errors), word, word2)})
-        return jsonify({"success": False, "msg": "%s users in the lobby cannot play!" % len(errors)})
+
+        if len(errors):
+            word = "they have" if len(errors) > 1 else "has an"
+            word2 = "bans" if len(errors) > 1 else "ban"
+            lobby.sendAction({"type": "msg", "msg": "%s cannot queue, %s active %s!" % (', '.join(errors), word, word2)})
+            return jsonify({"success": False, "msg": "%s users in the lobby cannot play!" % len(errors)})
 
         if lobby.state in [LobbyState.LOBBY_STATE_CREATE, LobbyState.LOBBY_STATE_IDLE]:
             lobby.startQueue()

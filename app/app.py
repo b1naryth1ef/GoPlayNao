@@ -7,7 +7,9 @@ from views.api import api
 from database import User, redis, Session
 from util import flashy, limit
 
-import sys, os, time
+from worker import run
+
+import sys, os, time, thread
 
 app = Flask(__name__)
 oid = OpenID(app)

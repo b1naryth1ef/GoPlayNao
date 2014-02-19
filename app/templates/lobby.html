@@ -68,12 +68,14 @@
                         <div class="progress progress-striped active"><div class="progress-bar" style="width: 100%"></div></div>
                         <p>
                             <button id="lobby-queue-stop" class="owner btn btn-danger" style="display:none">Stop Queue!</button>
+                            <button id="lobby-leave" class="not-owner btn btn-danger" style="display:none">Leave Lobby</button>
                         </p>
                     </div>
                     <div id="lobby-info-main-waiting">
                         <h3>Waiting to Queue...</h3>
                         <p>
                             <div class="not-owner" style="display: none">Waiting for the lobby leader to start the match queue!</div>
+                            <button id="lobby-leave" class="not-owner btn btn-danger" style="display:none">Leave Lobby</button>
                             <button id="lobby-queue-start" class="owner btn btn-success" style="display:none">Start Queue!</button>
                         </p>
                     </div>
@@ -96,11 +98,7 @@
                     <h3>Lobby Members <button id="lobby-invite-btn" class="btn btn-primary">Invite</button></h3>
 
                     <table class="table table-hover">
-                        <tbody>
-                            <tr><td>B1NZYFAG</td></tr>
-                            <tr><td>u4ic</td></tr>
-                            <tr><td>neeko</td></tr>
-                            <tr><td>lilt</td></tr>
+                        <tbody id="lobby-member-list">
                         </tbody>
                     </table>
                 </div>
