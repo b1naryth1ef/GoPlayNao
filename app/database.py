@@ -25,7 +25,10 @@ class User(BaseModel):
     join_date = DateTimeField(default=datetime.utcnow)
     last_login = DateTimeField(default=datetime.utcnow)
 
+    # Permissions
     level = IntegerField(default=0)
+    # Gameplay
+    rank = IntegerField(default=0)
 
     @classmethod
     def steamGetOrCreate(cls, id):
@@ -195,6 +198,7 @@ class Lobby(BaseModel):
         self.owner = user
         self.members = [user.id]
         self.invited = []
+
         # Default Config
         self.config = json.dumps({
             "players": {"min": 6,"max": 12,},
@@ -209,7 +213,8 @@ class Lobby(BaseModel):
                 {'name': 'ns2_eclipse', 'rank': 0}
             ],
             "type": "ranked",
-            "duration": "short"
+            "duration": "short",
+            "ringer": False
         })
         self.save()
         return self
@@ -275,7 +280,14 @@ class InviteType(object):
     INVITE_TYPE_FRIEND = 3
     INVITE_TYPE_TEAM = 4 # Hint of future plans
 
+class InviteState(object):
+    INVITE_WAITING = 1
+    INVITE_EXPIRED = 2
+    INVITE_ACCEPTED = 3
+    INVITE_DENIED = 4
+
 class Invite(BaseModel):
+    state = IntegerField(default=InviteState.INVITE_WAITING)
     from_user = ForeignKeyField(User, related_name="invites_from")
     to_user = ForeignKeyField(User, related_name="invites_to")
     invitetype = IntegerField()
@@ -288,6 +300,11 @@ class Invite(BaseModel):
             if (self.created + relativedelta(seconds=self.duration)) < datetime.utcnow():
                 return False
         return True
+
+    @classmethod
+    def getQuery(cls, a, b):
+        return (((Invite.from_user == a) & (Invite.to_user == b)) |
+            ((Invite.from_user == b) & (Invite.to_user == a)))
 
     @classmethod
     def createLobbyInvite(cls, fromu, tou, lobby):
