@@ -20,7 +20,21 @@ def public_lobby(id=None):
             return flashy("That lobby does not exist!")
         if not lobby.canJoin(g.user):
             return flashy("You cannt join that lobby!")
+        if lobby.state == LobbyState.LOBBY_STATE_UNUSED:
+            return flashy("That lobby has expired!")
     return render_template("lobby.html", lobby=id)
+
+@public.route("/friends")
+@authed()
+def public_friends():
+    requests = [i for i in Invite.select().where(
+        (Invite.invitetype == InviteType.INVITE_TYPE_FRIEND) &
+        (Invite.to_user == g.user))]
+    friends = Friendship.select().where(((Friendship.usera == g.user) | (Friendship.userb == g.user))
+        & Friendship.active == True)
+    friends = [i for i in friends]
+
+    return render_template("friends.html",  friends=friends, requests=requests)
 
 # @public.route("/login")
 # def public_login():

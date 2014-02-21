@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container" style="fixed-header">
+    <div class="page-header">
+        <div class="page-title">
+            <h3>Friends</h3> 
+        </div>
+    </div>
+    <div class="row" id="friends-main">
+        <div class="col-md-12">
+            <div class="widget box">
+                <div class="widget-header">
+                    <h4>Your Friends</h4>
+                </div>
+                <div class="widget-content">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Username</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for friend in friends %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ friend.getNot(g.user).username}}</td>
+                                <td><button id="{{ friend.id }}" class="btn btn-xs btn-danger friends-unfriend">Unfriend</button></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody> 
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% if requests %}
+    <div class="row" id="friends-main">
+        <div class="col-md-12">
+            <div class="widget box">
+                <div class="widget-header">
+                    <h4>Friend Requests</h4>
+                </div>
+                <div class="widget-content">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Username</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for friend in requests %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ friend.from_user.username}}</td>
+                                <td><button id="{{ friend.id }}" class="btn btn-xs btn-danger friends-deny">Deny</button> <button id="{{ friend.id }}" class="btn btn-xs btn-success friends-accept">Accept</button></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody> 
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+$(document).ready(function () {
+    pug.friends();
+});
+</script>
+{% endblock %}

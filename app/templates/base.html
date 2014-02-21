@@ -52,6 +52,16 @@
     <script>$(document).ready(function(){App.init();Plugins.init();FormComponents.init()});</script> 
     <script type="text/javascript" src="/static/js/custom.js"></script> 
     <script type="text/javascript" src="/static/js/demo/pages_calendar.js"></script> 
+
+    <script>
+    // FUCK IT YOLO
+    USER = {}
+    {% if g.user %}
+        USER.id = {{ g.user.id }}
+        USER.name = "{{ g.user.username }}"
+        USER.steamid = {{ g.user.steamid }}
+    {% endif %}
+    </script>
 </head>
 <body class="theme-dark"> 
     <header class="header navbar navbar-fixed-top" role="banner"> 
@@ -98,15 +108,15 @@
             <div id="sidebar-content"> 
                 <form class="sidebar-search"> 
                     <div class="input-box">
-                        <button type="submit" class="submit"> <i class="icon-search"></i> </button> 
-                        <span><input type="text" placeholder="Search..."></span> 
+                        <button id="search-submit" class="submit"> <i class="icon-search"></i> </button> 
+                        <span><input id="search-input" type="text" placeholder="Search..."></span> 
                     </div> 
                 </form>
                 <div class="sidebar-search-results"> <i class="icon-remove close"></i> 
                     <div class="title"> Players</div>
-                    <ul class="notifications"> 
-                        <li>
-                            <a href="javascript:void(0);"> 
+                    <ul id="search-results" class="notifications"> 
+<!--                         <li>
+                            <a href=""> 
                                 <div class="col-left"> 
                                     <span class="label label-info"><i class="icon-star"></i></span>
                                 </div>
@@ -115,7 +125,7 @@
                                     <span class="time">32 Pugs Played</span>
                                 </div>
                             </a> 
-                        </li>
+                        </li> -->
                     </ul>
                 </div>
                 <ul id="nav"> 
@@ -125,7 +135,7 @@
                     </li>
                     {% if g.user %}
                         <li><a href="/lobby"><i class="icon-group"></i>Create Lobby</a></li>
-                        <li><a href="#"><i class="icon-smile"></i>Friends <span class="label label-info pull-right">6</span></a></li>
+                        <li><a href="/friends"><i class="icon-smile"></i>Friends <span class="label label-info pull-right">6</span></a></li>
                         <li><a href="#"><i class="icon-list"></i>Matches <span class="label label-info pull-right">332</span></a></li>
                         <li><a href="#"><i class="icon-bar-chart"></i>Stats</a></li>
                         <li><a href="#"><i class="icon-gears"></i>Settings</a></li>

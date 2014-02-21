@@ -1,0 +1,507 @@
+{% extends "base.html" %} {% block content %}
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="tabbable tabbable-custom tabbable-full-width">
+            <ul class="nav nav-tabs">
+                <li class="active"><a data-toggle="tab" href=
+                "#tab_overview">Overview</a></li>
+
+                <li class=""><a data-toggle="tab" href="#tab_edit_account">Edit
+                Account</a></li>
+            </ul>
+
+            <div class="tab-content row">
+                <div class="tab-pane active" id="tab_overview">
+                    <div class="col-md-3">
+                        <div class="list-group">
+                            <ul>
+                                <li class="list-group-item no-padding">
+                                <img alt="" src=
+                                "assets/img/demo/avatar-large.jpg"></li>
+
+                                <li style="list-style: none"><a class=
+                                "list-group-item" href=
+                                "javascript:void(0);">Projects</a> <a class=
+                                "list-group-item" href=
+                                "javascript:void(0);">Messages</a> <a class=
+                                "list-group-item" href=
+                                "javascript:void(0);"><span class=
+                                "badge">3</span>Friends</a> <a class=
+                                "list-group-item" href=
+                                "javascript:void(0);">Settings</a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="col-md-9">
+                        <div class="row profile-info">
+                            <div class="col-md-7">
+                                <div class="alert alert-info">
+                                    You will receive all future updates for
+                                    free!
+                                </div>
+
+                                <h1>John Doe</h1>
+
+                                <dl class="dl-horizontal">
+                                    <dt>Description lists</dt>
+
+                                    <dd>A description list is perfect for
+                                    defining terms.</dd>
+
+                                    <dt>Euismod</dt>
+
+                                    <dd>Vestibulum id ligula porta felis
+                                    euismod semper eget lacinia odio sem nec
+                                    elit.</dd>
+
+                                    <dd>Donec id elit non mi porta gravida at
+                                    eget metus.</dd>
+
+                                    <dt>Malesuada porta</dt>
+
+                                    <dd>Etiam porta sem malesuada magna mollis
+                                    euismod.</dd>
+
+                                    <dt>Felis euismod semper eget lacinia</dt>
+
+                                    <dd>Fusce dapibus, tellus ac cursus
+                                    commodo, tortor mauris condimentum nibh, ut
+                                    fermentum massa justo sit amet risus.</dd>
+                                </dl>
+
+                                <p>Lorem ipsum dolor sit amet, consectetuer
+                                adipiscing elit, sed diam nonummy nibh euismod
+                                tincidunt laoreet dolore magna aliquam
+                                tincidunt erat volutpat laoreet dolore magna
+                                aliquam tincidunt erat volutpat.</p>
+                            </div>
+
+                            <div class="col-md-5">
+                                <div class="widget">
+                                    <div class="widget-header">
+                                        <h4>Sales</h4>
+                                    </div>
+
+                                    <div class="widget-content">
+                                        <div class="chart" id=
+                                        "chart_filled_blue" style=
+                                        "padding: 0px; position: relative;">
+                                            <div class="flot-text" style=
+                                            "position: absolute; top: 0px; left: 0px; bottom: 0px; right: 0px; font-size: smaller; color: rgb(84, 84, 84);">
+                                            <div class=
+                                            "flot-x-axis flot-x1-axis xAxis x1Axis"
+                                                style=
+                                                "position: absolute; top: 0px; left: 0px; bottom: 0px; right: 0px; display: block;">
+                                                <div class=
+                                                "flot-tick-label tickLabel"
+                                                style=
+                                                "position: absolute; max-width: 37px; top: 235px; left: 65px; text-align: center;">
+                                                    Feb
+                                                    </div>
+
+                                                    <div class=
+                                                    "flot-tick-label tickLabel"
+                                                    style=
+                                                    "position: absolute; max-width: 37px; top: 235px; left: 101px; text-align: center;">
+                                                    Mar
+                                                    </div>
+
+                                                    <div class=
+                                                    "flot-tick-label tickLabel"
+                                                    style=
+                                                    "position: absolute; max-width: 37px; top: 235px; left: 143px; text-align: center;">
+                                                    Apr
+                                                    </div>
+
+                                                    <div class=
+                                                    "flot-tick-label tickLabel"
+                                                    style=
+                                                    "position: absolute; max-width: 37px; top: 235px; left: 180px; text-align: center;">
+                                                    May
+                                                    </div>
+
+                                                    <div class=
+                                                    "flot-tick-label tickLabel"
+                                                    style=
+                                                    "position: absolute; max-width: 37px; top: 235px; left: 223px; text-align: center;">
+                                                    Jun
+                                                    </div>
+
+                                                    <div class=
+                                                    "flot-tick-label tickLabel"
+                                                    style=
+                                                    "position: absolute; max-width: 37px; top: 235px; left: 264px; text-align: center;">
+                                                    Jul
+                                                    </div>
+
+                                                    <div class=
+                                                    "flot-tick-label tickLabel"
+                                                    style=
+                                                    "position: absolute; max-width: 37px; top: 235px; left: 302px; text-align: center;">
+                                                    Aug
+                                                    </div>
+
+                                                    <div class=
+                                                    "flot-tick-label tickLabel"
+                                                    style=
+                                                    "position: absolute; max-width: 37px; top: 235px; left: 343px; text-align: center;">
+                                                    Sep
+                                                    </div>
+
+                                                    <div class=
+                                                    "flot-tick-label tickLabel"
+                                                    style=
+                                                    "position: absolute; max-width: 37px; top: 235px; left: 382px; text-align: center;">
+                                                    Oct
+                                                    </div>
+
+                                                    <div class=
+                                                    "flot-tick-label tickLabel"
+                                                    style=
+                                                    "position: absolute; max-width: 37px; top: 235px; left: 422px; text-align: center;">
+                                                    Nov
+                                                    </div>
+
+                                                    <div class=
+                                                    "flot-tick-label tickLabel"
+                                                    style=
+                                                    "position: absolute; max-width: 37px; top: 235px; left: 461px; text-align: center;">
+                                                    Dec
+                                                    </div>
+                                                </div>
+
+                                                <div class=
+                                                "flot-y-axis flot-y1-axis yAxis y1Axis"
+                                                style=
+                                                "position: absolute; top: 0px; left: 0px; bottom: 0px; right: 0px; display: block;">
+                                                <div class=
+                                                "flot-tick-label tickLabel"
+                                                style=
+                                                "position: absolute; top: 218px; left: 18px; text-align: right;">
+                                                    0
+                                                    </div>
+
+                                                    <div class=
+                                                    "flot-tick-label tickLabel"
+                                                    style=
+                                                    "position: absolute; top: 182px; left: 6px; text-align: right;">
+                                                    500
+                                                    </div>
+
+                                                    <div class=
+                                                    "flot-tick-label tickLabel"
+                                                    style=
+                                                    "position: absolute; top: 146px; left: 0px; text-align: right;">
+                                                    1000
+                                                    </div>
+
+                                                    <div class=
+                                                    "flot-tick-label tickLabel"
+                                                    style=
+                                                    "position: absolute; top: 110px; left: 0px; text-align: right;">
+                                                    1500
+                                                    </div>
+
+                                                    <div class=
+                                                    "flot-tick-label tickLabel"
+                                                    style=
+                                                    "position: absolute; top: 74px; left: 0px; text-align: right;">
+                                                    2000
+                                                    </div>
+
+                                                    <div class=
+                                                    "flot-tick-label tickLabel"
+                                                    style=
+                                                    "position: absolute; top: 38px; left: 0px; text-align: right;">
+                                                    2500
+                                                    </div>
+
+                                                    <div class=
+                                                    "flot-tick-label tickLabel"
+                                                    style=
+                                                    "position: absolute; top: 3px; left: 0px; text-align: right;">
+                                                    3000
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="legend">
+                                                <div style=
+                                                "position: absolute; width: 72px; height: 17px; top: 15px; right: 16px; background-color: rgb(255, 255, 255); opacity: 0.95;">
+                                                </div>
+
+                                                <table style=
+                                                "position:absolute;top:15px;right:16px;;font-size:smaller;color:#545454">
+                                                <tbody>
+                                                        <tr>
+                                                            <td class=
+                                                            "legendColorBox">
+                                                                <div style=
+                                                                "border:1px solid ;padding:1px">
+                                                                <div style=
+                                                                "width:4px;height:0;border:5px solid #54728c;overflow:hidden">
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+
+                                                            <td class=
+                                                            "legendLabel">Total
+                                                            clicks</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="widget">
+                                    <div class="widget-content">
+                                        <table class=
+                                        "table table-hover table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>#</th>
+
+                                                    <th>First Name</th>
+
+                                                    <th>Last Name</th>
+
+                                                    <th class="hidden-xs">
+                                                    Username</th>
+
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+
+                                            <tbody>
+                                                <tr>
+                                                    <td>1</td>
+
+                                                    <td>Joey</td>
+
+                                                    <td>Greyson</td>
+
+                                                    <td class="hidden-xs">
+                                                    joey123</td>
+
+                                                    <td><span class=
+                                                    "label label-success">Approved</span></td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td>2</td>
+
+                                                    <td>Wolf</td>
+
+                                                    <td>Bud</td>
+
+                                                    <td class="hidden-xs">
+                                                    wolfy</td>
+
+                                                    <td><span class=
+                                                    "label label-info">Pending</span></td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td>3</td>
+
+                                                    <td>Darin</td>
+
+                                                    <td>Alec</td>
+
+                                                    <td class="hidden-xs">
+                                                    alec82</td>
+
+                                                    <td><span class=
+                                                    "label label-warning">Suspended</span></td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td>4</td>
+
+                                                    <td>Andrea</td>
+
+                                                    <td>Brenden</td>
+
+                                                    <td class="hidden-xs">
+                                                    andry</td>
+
+                                                    <td><span class=
+                                                    "label label-danger">Blocked</span></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane" id="tab_edit_account">
+                    <form action="#" class="form-horizontal">
+                        <div class="col-md-12">
+                            <div class="widget">
+                                <div class="widget-header">
+                                    <h4>General Information</h4>
+                                </div>
+
+                                <div class="widget-content">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label class=
+                                                "col-md-4 control-label">First
+                                                name:</label>
+
+                                                <div class="col-md-8">
+                                                    <input class="form-control"
+                                                    name="regular" type="text"
+                                                    value="John">
+                                                </div>
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label class=
+                                                "col-md-4 control-label">Last
+                                                name:</label>
+
+                                                <div class="col-md-8">
+                                                    <input class="form-control"
+                                                    name="regular" type="text"
+                                                    value="Doe">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label class=
+                                                "col-md-4 control-label">Gender:</label>
+
+                                                <div class="col-md-8">
+                                                    <select class=
+                                                    "form-control">
+                                                        <option selected=
+                                                        "selected" value=
+                                                        "male">
+                                                            Male
+                                                        </option>
+
+                                                        <option value="female">
+                                                            Female
+                                                        </option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label class=
+                                                "col-md-4 control-label">Age:</label>
+
+                                                <div class="col-md-8">
+                                                    <input class=
+                                                    "form-control input-width-small"
+                                                    name="regular" type="text"
+                                                    value="28">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-12 form-vertical no-margin">
+                            <div class="widget">
+                                <div class="widget-header">
+                                    <h4>Settings</h4>
+                                </div>
+
+                                <div class="widget-content">
+                                    <div class="row">
+                                        <div class="col-md-4 col-lg-2">
+                                            <strong class=
+                                            "subtitle padding-top-10px">Permanent
+                                            username</strong>
+
+                                            <p class="text-muted">Dolor sit
+                                            amet.</p>
+                                        </div>
+
+                                        <div class="col-md-8 col-lg-10">
+                                            <div class="form-group">
+                                                <label class=
+                                                "control-label padding-top-10px">
+                                                Username:</label> <input class=
+                                                "form-control" disabled=
+                                                "disabled" name="username"
+                                                type="text" value="john.doe">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-4 col-lg-2">
+                                            <strong class="subtitle">Change
+                                            password</strong>
+
+                                            <p class="text-muted">Lorem ipsum
+                                            dolor sit amet, consectetur
+                                            adipiscing elit.</p>
+                                        </div>
+
+                                        <div class="col-md-8 col-lg-10">
+                                            <div class="form-group">
+                                                <label class=
+                                                "control-label">Old
+                                                password:</label> <input class=
+                                                "form-control" name=
+                                                "old_password" placeholder=
+                                                "Leave empty for no password-change"
+                                                type="password">
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label class=
+                                                "control-label">New
+                                                password:</label> <input class=
+                                                "form-control" name=
+                                                "new_password" placeholder=
+                                                "Leave empty for no password-change"
+                                                type="password">
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label class=
+                                                "control-label">Repeat new
+                                                password:</label> <input class=
+                                                "form-control" name=
+                                                "new_password_repeat"
+                                                placeholder=
+                                                "Leave empty for no password-change"
+                                                type="password">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <input class="btn btn-primary pull-right" type=
+                                "submit" value="Update Account">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>{% endblock %}

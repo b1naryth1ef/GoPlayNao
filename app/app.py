@@ -7,7 +7,9 @@ from views.api import api
 from database import User, redis, Session
 from util import flashy, limit
 
-import sys, os, time
+from worker import run
+
+import sys, os, time, thread
 
 app = Flask(__name__)
 oid = OpenID(app)
@@ -32,9 +34,17 @@ def login():
 @limit(20)
 def logout():
     if g.user:
-        del request.cookies['sid']
-        return flashy("You have been logged out!", "success")
+        resp = flashy("You have been logged out!", "success")
+        resp.set_cookie('sid', '', expires=0)
+        return resp
     return flashy("You are not logged in!")
+
+@app.route("/test/<id>")
+def test(id):
+    g.user = User.select().where(User.id == id).get()
+    resp = flashy("Welcome back %s!" % g.user.username, "success")
+    resp.set_cookie("sid", g.user.login(), expires=time.time() + Session.LIFETIME)
+    return resp
 
 @oid.after_login
 def create_or_login(resp):
