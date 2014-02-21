@@ -186,6 +186,9 @@ class Lobby(BaseModel):
         if self.owner == user:
             return True
 
+        if user.id in self.members:
+            return True
+
         for i in Invite.select().where((Invite.ref == self.id) & (Invite.to_user == user)):
             if i.valid():
                 return True
@@ -328,7 +331,6 @@ class Invite(BaseModel):
 class Friendship(BaseModel):
     usera = ForeignKeyField(User, related_name="friendshipa")
     userb = ForeignKeyField(User, related_name="friendshipb")
-    #invite = ForeignKeyField(Invite, null=True)
     active = BooleanField(default=True)
 
     @classmethod
@@ -336,7 +338,6 @@ class Friendship(BaseModel):
         self = cls()
         self.usera = a
         self.userb = b
-        #self.invite = invite
         self.save()
         return self
 
@@ -344,7 +345,6 @@ class Friendship(BaseModel):
         return {
             "usera": self.usera.format(),
             "userb": self.userb.format(),
-            #"invite": self.invite.format() if self.invite else {},
             "active": self.active,
         }
 

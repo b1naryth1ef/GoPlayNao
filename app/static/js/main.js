@@ -11,6 +11,8 @@ var pug = {
     lobbypoll: 0,
     config: {},
     pollLobbyInterval: null,
+    getStatsInterval: null,
+    bg: false,
 
     pushurl: function(url) {
         if (history) {
@@ -128,7 +130,7 @@ var pug = {
 
     lobbyPollStart: function(first) {
         clearInterval(pug.pollLobbyInterval);
-        pug.pollLobbyInterval = setInterval(pug.pollLobby, 1000 * 2.5);
+        pug.pollLobbyInterval = setInterval(pug.pollLobby, 1000 * (pug.bg ? 30 : 2));
         pug.pollLobby(first)
     },
 
@@ -307,8 +309,8 @@ var pug = {
 
     // Loads inital stats and queues for refresh
     runGetStats: function() {
+        pug.getStatesInterval = setInterval(pug.getStats, 1000 * (pug.bg ? 120 : 15));
         pug.getStats();
-        setInterval(pug.getStats, 1000 * 15);
     },
 
     // Loads stats from the backend and dynamically loads them into values
@@ -381,6 +383,25 @@ var pug = {
     }
 }
 
-$(document).ready(function () {
+var backgroundTimeout = null;
+$(window).focus(function() {
+    // Woah wait up guys I'm back!
+    clearTimeout(backgroundTimeout);
+    pug.bg = false;
+            pug.lobbyPollStart();
+        pug.runGetStats();
+});
 
+$(window).blur(function() {
+    // If the client window is idle for more than 15 minutes, all the refresh timers get set long
+    //  to prevent major spamming of the backend
+    backgroundTimeout = setTimeout(function () {
+        pug.bg = true;
+        pug.lobbyPollStart();
+        pug.runGetStats();
+    }, 60000 * 15)
+});
+
+$(document).ready(function () {
+    
 });

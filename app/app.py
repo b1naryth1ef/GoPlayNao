@@ -4,7 +4,7 @@ from steam import getSteamAPI
 
 from views.public import public
 from views.api import api
-from database import User, redis, Session
+from database import User, redis, Session, Lobby
 from util import flashy, limit
 
 from worker import run
@@ -45,6 +45,17 @@ def test(id):
     resp = flashy("Welcome back %s!" % g.user.username, "success")
     resp.set_cookie("sid", g.user.login(), expires=time.time() + Session.LIFETIME)
     return resp
+
+@app.route("/join/<id>")
+def jointest(id):
+    l = Lobby.select().where(Lobby.id == id).get() 
+    l.members.append(g.user.id)
+    l.save()
+    l.sendAction({
+        "type": "join",
+        "member": g.user.format()
+    })
+    return flashy("Yay!", "success")
 
 @oid.after_login
 def create_or_login(resp):

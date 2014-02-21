@@ -3,6 +3,7 @@ Lobby:
     Map, preferred map (e.g. rate maps)
     Ranked or unranked
     Long (play both sides)
+    Ringer (whether to jump into ongoing match)
 
 Default Config:
 {
@@ -10,16 +11,17 @@ Default Config:
         "min": 6,
         "max": 12,
     },
-    "maps": [
-        {'name': 'ns2_summit', 'rank': 0},
-        {'name': 'ns2_tram', 'rank': 0},
-        {'name': 'ns2_mineshaft', 'rank': 0},
-        {'name': 'ns2_docking', 'rank': 0},
-        {'name': 'ns2_veil', 'rank': 0},
-        {'name': 'ns2_refinery', 'rank': 0},
-        {'name': 'ns2_biodome', 'rank': 0},
-        {'name': 'ns2_eclipse', 'rank': 0}
-    ],
+    "maps": {
+        "ns2_summit": 0,
+        "ns2_tram": 0,
+        "ns2_mineshaft": 0,
+        "ns2_docking": 0,
+        "ns2_veil": 0,
+        "ns2_refinery": 0,
+        "ns2_biodome": 0,
+        "ns2_eclipse": 0
+    },
     "type": "ranked",
-    "duration": "short"
+    "duration": "short",
+    "ringer": false
 }
