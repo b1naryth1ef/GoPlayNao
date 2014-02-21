@@ -275,7 +275,10 @@ def api_lobby_info():
     if not isinstance(lobby, Lobby):
         return lobby
 
-    return jsonify(lobby.format())
+    return jsonify({
+        "success": True,
+        "lobby": lobby.format()
+    })
 
 @api.route("/lobby/poll")
 @authed()
