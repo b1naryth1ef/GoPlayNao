@@ -9,7 +9,7 @@ from util import flashy, limit
 
 from worker import run
 
-import sys, os, time, thread
+import sys, os, time, thread, json
 
 app = Flask(__name__)
 oid = OpenID(app)
@@ -92,6 +92,10 @@ def beforeRequest():
             redis.delete("ss:%s" % request.values.get("sid"))
             return jsonify({"success": False, "error": 2, "msg": "Session Corrupted!"})
         g.server = s
+
+@app.template_filter("json")
+def filter_json(i):
+    return json.dumps(i)
 
 if __name__ == "__main__":
     app.run(debug=True)

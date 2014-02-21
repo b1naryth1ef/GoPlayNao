@@ -9,6 +9,7 @@ var LobbyState = {
 var pug = {
     lobbyid: null,
     lobbypoll: 0,
+    lobby: null,
     config: {},
     pollLobbyInterval: null,
     getStatsInterval: null,
@@ -144,20 +145,29 @@ var pug = {
             data: {
                 id: pug.lobbyid
             },
-            success: pug.lobbyRender
+            success: function (data) {
+                if  (data.success) {
+                    pug.lobby = data.lobby
+                    pug.lobbyRender()
+                }
+            }
         });
         
     },
 
+    lobbyMemberTemplate: _.template('<tr id="member-<%= m.id %>"><td><%= m.username %>'+
+        '<% if (leader) { %><span class="label label-danger lobby-kick">X</span><% } %></td></tr>'),
+
     lobbyAddMember: function(m) {
-        $("#lobby-member-list").append('<tr id="member-'+m.id+'"><td>'+m.username+'</td></tr>');
+        var isLeader = (USER.id == pug.lobby.owner)
+        $("#lobby-member-list").append(pug.lobbyMemberTemplate({m: m, leader: isLeader}));
     },
 
     lobbyRmvMember: function(id) {
         $("#member-"+id).remove();
     },
 
-    lobbyRender: function(data) {
+    lobbyRender: function() {
         $("#lobby-maker").hide();
         $("#lobby").show();
         $("#lobby-chat-list").slimScroll({
@@ -165,13 +175,13 @@ var pug = {
             start: 'bottom',
         });
 
-        if (data.owner != USER.id) {
+        if (pug.lobby.owner != USER.id) {
             $(".not-owner").show()
         } else {
             $(".owner").show()
         }
 
-        $.each(data.members, function(_, v) {
+        $.each(pug.lobby.members, function(_, v) {
            pug.lobbyAddMember(v)
         })
 
@@ -238,7 +248,7 @@ var pug = {
                 send_lobby_chat();
             }
         });
-        pug.lobbyHandleState(data.state)
+        pug.lobbyHandleState(pug.lobby.state)
 
         $("#lobby-invite-btn").click(function () {
             $("#invite-modal").modal('show')
@@ -356,7 +366,7 @@ var pug = {
                     id: $(this).attr("id")
                 },
                 success: function (data) {
-                    if (dat.success) {
+                    if (data.success) {
                         // FIXME
                         $($(this).parent()).remove()
                         pug.msg("Denied Friend Invite!", "warning", "#friends-main", true)
@@ -372,7 +382,7 @@ var pug = {
                     id: $(this).attr("id")
                 },
                 success: function (data) {
-                    if (dat.success) {
+                    if (data.success) {
                         // FIXME
                         $($(this).parent()).remove()
                         pug.msg("Accepted Friend Invite!", "success", "#friends-main", true)
@@ -380,7 +390,20 @@ var pug = {
                 }
             })
         });
-    }
+    },
+
+    profile: function(u) {
+        $.ajax("/api/users/stats", {
+            data: {
+                id: u.id
+            },
+            success: function (data) {
+                if (data.success) {
+                    graph_drawPlayerOverview(data.stats, "#profile-graph-overview")
+                }
+            }
+        })
+    },
 }
 
 var backgroundTimeout = null;

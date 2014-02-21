@@ -79,6 +79,15 @@ class User(BaseModel):
         i.invitetype = InviteType.INVITE_TYPE_FRIEND
         i.save()
 
+    def getStats(self):
+        DAY = (60 * 60 * 24)
+        a, b = [], []
+        for i, day in enumerate(xrange(0, 30)):
+            a.append([(time.time() - (DAY * day)) * 1000, random.randint(1, 10)])
+            b.append([(time.time() - (DAY * day)) * 1000, random.randint(1, 5)])
+
+        return {"skill": a, "kd": b}
+
 class Ban(BaseModel):
     user = ForeignKeyField(User, null=True)
     steamid = IntegerField(null=True)
