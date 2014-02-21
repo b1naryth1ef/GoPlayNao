@@ -36,6 +36,15 @@ def public_friends():
 
     return render_template("friends.html",  friends=friends, requests=requests)
 
+@public.route("/u/<user>")
+def public_user(user=None):
+    try:
+        u = User.select().where(User.username ** user).get()
+    except User.DoesNotExist:
+        return flashy("No such user!")
+
+    return render_template("profile.html", user=u)
+
 # @public.route("/login")
 # def public_login():
 #     args, success = require(username=str, password=str)

@@ -480,6 +480,26 @@ def api_users_unfriend():
     f.delete().execute()
     return jsonify({"success": True})
 
+@api.route("/users/stats")
+@authed()
+def api_users_stats():
+    args, success = require(id=int)
+
+    if not success:
+        return jsonify({
+            "success": False,
+            "msg": "You must give a user id to view user stats!"
+        })
+
+    try:
+        u = User.select().where(User.id == args.id).get()
+    except User.DoesNotExist:
+        return jsonify({
+            "success": False,
+            "msg": "User does not exist!"
+        })
+    return jsonify({"success": True, "stats": u.getStats()})
+
 @api.route("/invites/accept", methods=['POST'])
 @authed()
 def api_invites_accept():

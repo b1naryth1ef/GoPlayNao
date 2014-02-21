@@ -364,7 +364,7 @@ var pug = {
                     id: $(this).attr("id")
                 },
                 success: function (data) {
-                    if (dat.success) {
+                    if (data.success) {
                         // FIXME
                         $($(this).parent()).remove()
                         pug.msg("Denied Friend Invite!", "warning", "#friends-main", true)
@@ -380,7 +380,7 @@ var pug = {
                     id: $(this).attr("id")
                 },
                 success: function (data) {
-                    if (dat.success) {
+                    if (data.success) {
                         // FIXME
                         $($(this).parent()).remove()
                         pug.msg("Accepted Friend Invite!", "success", "#friends-main", true)
@@ -388,7 +388,20 @@ var pug = {
                 }
             })
         });
-    }
+    },
+
+    profile: function(u) {
+        $.ajax("/api/users/stats", {
+            data: {
+                id: u.id
+            },
+            success: function (data) {
+                if (data.success) {
+                    graph_drawPlayerOverview(data.stats, "#profile-graph-overview")
+                }
+            }
+        })
+    },
 }
 
 $(document).ready(function () {
