@@ -7,6 +7,33 @@ Match: represents a present or past match which includes data on the server,
 
 Player: represents a user in the system. One per steamid.
 
+
+
+
+/info
+    Returns generic information about the API, including the version and a global status state. This will also return the users id if the request has a valid session.
+
+/stats
+    Returns global stats about the platform
+
+/bans
+    /list
+        Returns a listing of paginated steamid's that have bans within the system.
+
+    /get
+        Returns in-depth information about a ban in the system based on id's returned from /bans/list
+
+    /ping
+        A backend utility which logs a login attempt by a banned user to a server
+
+/servers
+    /register
+        Methods for servers to login.
+
+
+
+
+
 /api/info returns information about the api, incl. version and status and username
 /api/stats gets global stats information
 

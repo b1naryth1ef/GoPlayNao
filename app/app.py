@@ -135,10 +135,12 @@ def socket_connect():
 @socketio.on("ping", namespace="/api/poll")
 def socket_ping(data):
     # We pull the user id ourselves to avoid excessive DB queries
-    if request.values.get("sid"):
-        value = redis.get("ss:%s" % request.values.get("sid"))
-        if value:
-            redis.set("user:%s:ping" % value, time.time())
+    if request.cookies.get("sid"):
+        s = Session.find(request.cookies.get("sid"))
+        if s:
+            redis.set("user:%s:ping" % s['user'], time.time())
+            if 'lobby' in data:
+                redis.set("user:%s:lobby:%s:ping" % (s['user'], data['lobby']), time.time())
 
 @app.template_filter("json")
 def filter_json(i):

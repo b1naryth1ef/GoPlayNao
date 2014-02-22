@@ -13,7 +13,14 @@ var JST = {
     invite: _.template('<li id="side-bar-invite"><div class="col-left">'+
             '<span class="label label-info"><i class="icon-envelope"></i></span></div>'+
             '<div class="col-right with-margin">'+
-            '<a href="<%= url %>"><span class="message"><%= msg %></span></a></li>')
+            '<a href="<%= url %>"><span class="message"><%= msg %></span></a></li>'),
+
+    lobbyFriend: _.template('<tr id="friend-<%= f.id %>"><td><%= f.username %></td>'+
+        '<td><a href="" id="<%= f.id %>" class="label label-primary lobby-invite">Invite</a></td></tr>'),
+
+    lobbyMemberTemplate: _.template('<tr id="member-<%= m.id %>"><td><%= m.username %></td>'+
+        '<% if (leader) { %><td><a href="" class="label label-danger lobby-kick">kick</a></td><% } %></tr>'),
+
 }
 
 var SOUNDS = {
@@ -94,7 +101,7 @@ var pug = {
 
         // This interval makes sure we stay active in lobbies/etc
         setInterval(function () {
-            pug.socket.emit("ping", {ping: 1})
+            pug.socket.emit("ping", {lobby: pug.lobbyid})
         }, 1000 * 5)
     },
 
@@ -154,7 +161,7 @@ var pug = {
                 pug.lobbyAddAction(data.msg, "warning");
                 break;
             case "msg":
-                pug.lobbyAddAction(data.msg, "danger");
+                pug.lobbyAddAction(data.msg, data.cls || "danger");
                 break;
             default:
                 console.log("WTF:")
@@ -231,17 +238,26 @@ var pug = {
         });
         
     },
-
-    lobbyMemberTemplate: _.template('<tr id="member-<%= m.id %>"><td><%= m.username %>'+
-        '<% if (leader) { %><span class="label label-danger lobby-kick">X</span><% } %></td></tr>'),
-
     lobbyAddMember: function(m) {
         var isLeader = (USER.id == pug.lobbydata.owner)
-        $("#lobby-member-list").append(pug.lobbyMemberTemplate({m: m, leader: isLeader}));
+        $("#lobby-member-list").append(JST.lobbyMemberTemplate({m: m, leader: isLeader}));
     },
 
     lobbyRmvMember: function(id) {
         $("#member-"+id).remove();
+    },
+
+    lobbyRenderFriends: function() {
+        $.ajax("/api/users/friends", {
+            success: function (data) {
+                console.log(data)
+                if (data.success) {
+                    $.each(data.friends.online, function(_, v) {
+                        $("#lobby-friends-list").append(JST.lobbyFriend({f: v}))
+                    });
+                }
+            }
+        })
     },
 
     lobbyRender: function() {
@@ -258,9 +274,24 @@ var pug = {
             $(".owner").show()
         }
 
+        pug.lobbyRenderFriends();
+
         $.each(pug.lobbydata.members, function(_, v) {
             console.log(v);
-           pug.lobbyAddMember(v)
+            pug.lobbyAddMember(v)
+        })
+
+
+        $("#lobby-friends").delegate(".lobby-invite", "click", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $.ajax("/api/lobby/invite", {
+                type: "POST",
+                data: {
+                    lid: pug.lobbyid,
+                    uid: $(this).attr("id")
+                }
+            })
         })
 
         $("#lobby-queue-start").click(function () {
@@ -393,6 +424,7 @@ var pug = {
         });
 
         $(".friends-deny").click(function (e) {
+            var dis = $(this)
             $.ajax("/api/invites/deny", {
                 type: "POST",
                 data: {
@@ -400,8 +432,7 @@ var pug = {
                 },
                 success: function (data) {
                     if (data.success) {
-                        // FIXME
-                        $($(this).parent()).remove()
+                        dis.parents()[1].remove()
                         pug.msg("Denied Friend Invite!", "warning", "#friends-main", true)
                     }
                 }
@@ -409,6 +440,7 @@ var pug = {
         });
 
         $(".friends-accept").click(function (e) {
+            var dis = $(this);
             $.ajax("/api/invites/accept", {
                 type: "POST",
                 data: {
@@ -416,8 +448,7 @@ var pug = {
                 },
                 success: function (data) {
                     if (data.success) {
-                        // FIXME
-                        $($(this).parent()).remove()
+                        dis.parents()[1].remove()
                         pug.msg("Accepted Friend Invite!", "success", "#friends-main", true)
                     }
                 }

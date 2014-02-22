@@ -24,12 +24,26 @@ def repeat(delay):
 LOBBY_TIMEOUT = 15
 
 @schedule(seconds=5)
+def task_user_timeout():
+    for lobby in Lobby.select().where((Lobby.state != LobbyState.LOBBY_STATE_UNUSED) & (Lobby.state != LobbyState.LOBBY_STATE_PLAYING)):
+        for member in lobby.getActiveMembers():
+            u = User.select().where(User.id == member).get()
+            if (time.time() - float(redis.get("user:%s:lobby:%s:ping" % (lobby.id, member)) or 0)) > 20:
+                lobby.sendAction({
+                    "type": "quit",
+                    "member": u.format(),
+                    "msg": "%s timed out from the lobby!" % u.username
+                })
+                lobby.members.remove(member)
+                lobby.save()
+
+@schedule(seconds=5)
 def task_lobby_timeout():
     """
     If a user times out from a lobby, time them out
     """
     for lobby in Lobby.select().where((Lobby.state != LobbyState.LOBBY_STATE_UNUSED)):
-        for member in lobby.members:
+        for member in lobby.getMembers():
             u = User.select().where(User.id == member).get()
             if not redis.exists("lobby:ping:%s:%s" % (lobby.id, member)):
                 continue

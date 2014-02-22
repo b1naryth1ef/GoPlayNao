@@ -16,7 +16,7 @@ def api_info():
     Returned:
         version: The API version, this is for external services.
         status: 1 on OK, -1 on ERR, >1 on other errors (TBD)
-        user: optional, if the user is logged in this is their username
+        user: optional, if the user is logged in this is their user id
 
     This endpoint is limited to 60 requests per minute.
     """
@@ -27,7 +27,7 @@ def api_info():
     }
 
     if g.user:
-        data['user'] = g.user.username
+        data['user'] = g.user.id
 
     return jsonify(data)
 
@@ -223,7 +223,12 @@ def api_stats():
 @authed()
 def api_lobby_create():
     """
-    Creates a lobby
+    Creates a lobby. In it's current state this allows no configuration
+    to be passed into the backend.
+
+    TODO: allow config to be passed
+
+    Returns a lobby object.
     """
     lobby = Lobby.getNew(g.user)
     data = lobby.format()
@@ -355,6 +360,73 @@ def api_lobby_action():
         else:
             return jsonify({"success": False, "msg": "Lobby Not Queued!"})
 
+@api.route("/lobby/invite", methods=['POST'])
+@authed()
+def api_lobby_invite():
+    args, success = require(uid=int, lid=int)
+
+    if not success:
+        return jsonify({
+            "success": False,
+            "msg": "You must specify a user-id and lobby-id!"
+        })
+
+    try:
+        u = User.select().where(User.id == args.uid).get()
+    except User.DoesNotExist:
+        return jsonfiy({
+            "success": False,
+            "msg": "No user with that id!"
+        })
+
+    try:
+        l = Lobby.select().where(Lobby.id == args.lid).get()
+    except Lobby.DoesNotExist:
+        return jsonify({
+            "success": False,
+            "msg": "No lobby with that id!"
+        })
+
+    if not str(g.user.id) in l.getMembers():
+        return jsonify({
+            "success": False,
+            "msg": "You cannot invite users to that lobby!"
+        })
+
+    if str(u.id) in l.getMembers():
+        return jsonify({
+            "success": False,
+            "msg": "That user is already part of the lobby!"
+        })
+
+    q = Invite.select().where(
+        (Invite.getQuery(g.user, u)) &
+        (Invite.state == InviteState.INVITE_WAITING) &
+        (Invite.invitetype == InviteType.INVITE_TYPE_LOBBY) &
+        (Invite.ref == l.id))
+
+    if q.count():
+        return jsonify({
+            "success": False,
+            "msg": "You've already invited that user!"
+        })
+
+    i = Invite()
+    i.from_user = g.user
+    i.to_user = u
+    i.invitetype = InviteType.INVITE_TYPE_LOBBY
+    i.ref = l.id
+    i.save()
+    i.notify()
+
+    l.sendAction({
+        "type": "msg",
+        "msg": "%s invited user %s to the lobby!" % (g.user.username, u.username),
+        "cls": "success"
+    })
+
+    return jsonify({"success": True})
+
 @api.route("/users/search", methods=["POST"])
 @authed()
 def api_users_search():
@@ -473,6 +545,34 @@ def api_users_stats():
         })
     return jsonify({"success": True, "stats": u.getStats()})
 
+@api.route("/users/friends")
+@authed()
+def api_users_friends():
+    """
+    Returns friends for the current user
+
+    Payload:
+        {"online":[{} ...], "offline": [{} ...], "banned": [{} ...]}
+    """
+    q = g.user.getFriendsQuery()
+
+    data = {"online": [], "offline": [], "banned": []}
+
+    for entry in q:
+        user = entry.getNot(g.user)
+        if user.isBanned():
+            data['banned'].append(user.format())
+        elif user.isOnline():
+            data['online'].append(user.format())
+        else:
+            data['offline'].append(entry.format())
+
+    return jsonify({
+        "success": True,
+        "friends": data
+    })
+
+
 @api.route("/invites/accept", methods=['POST'])
 @authed()
 def api_invites_accept():
@@ -493,7 +593,7 @@ def api_invites_accept():
         })
 
     if i.invitetype == InviteType.INVITE_TYPE_FRIEND:
-        Friendship.create(g.user, i.to_user, i)
+        Friendship.create(g.user, i.from_user, i)
         i.state = InviteState.INVITE_ACCEPTED
         i.save()
         return jsonify({"success": True})

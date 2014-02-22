@@ -30,10 +30,22 @@ class User(BaseModel):
     join_date = DateTimeField(default=datetime.utcnow)
     last_login = DateTimeField(default=datetime.utcnow)
 
+    ips = ArrayField(default=[])
+
     # Permissions
     level = IntegerField(default=0)
     # Gameplay
     rank = IntegerField(default=0)
+
+    def isBanned(self):
+        return Ban.getActiveBanQuery((Ban.user == self.id) | (Ban.steamid == self.steamid)).count()
+
+    def isOnline(self):
+        value = redis.get("user:%s:ping" % self.id) or 0
+        print time.time() - float(value)
+        if (time.time() - float(value)) < 60:
+            return True
+        return False
 
     @classmethod
     def steamGetOrCreate(cls, id):
@@ -52,6 +64,8 @@ class User(BaseModel):
 
     def login(self):
         self.last_login = datetime.utcnow()
+        if request.remote_addr not in self.ips:
+            self.ips.append(request.remote_addr)
         self.save()
         return Session.create(self, request.remote_addr)
 
@@ -68,14 +82,17 @@ class User(BaseModel):
             "username": self.username
         }
 
-    def getFriendsQuery(self, user):
+    def getFriendsWithQuery(self, user):
         return Friendship.select().where(
             (((Friendship.usera == user) & (Friendship.userb == self)) |
             ((Friendship.usera == self) & (Friendship.userb == user)))
             & Friendship.active == True)
 
+    def getFriendsQuery(self):
+        return Friendship.select().where(((Friendship.usera == self) | (Friendship.userb == self)) & (Friendship.active == True))
+
     def isFriendsWith(self, user):
-        return bool(self.getFriendsQuery(user).count())
+        return bool(self.getFriendsWithQuery(user).count())
 
     def friendRequest(self, user):
         i = Invite()
@@ -95,7 +112,6 @@ class User(BaseModel):
         return {"skill": a, "kd": b}
 
     def push(self, data):
-        print "PUSH!"
         redis.publish("user:%s:push" % self.id, json.dumps(data))
 
 class Ban(BaseModel):
@@ -113,6 +129,10 @@ class Ban(BaseModel):
 
     # Match Reference
     # match = ForeignKeyField(Match, null=True)
+
+    @classmethod
+    def getActiveBanQuery(cls, ref):
+        return Ban.select().where((Ban.active == True) & (Ban.end < datetime.utcnow()) & ref)
 
     def format(self):
         return {
@@ -262,6 +282,12 @@ class Lobby(BaseModel):
 
     def getMembers(self):
         return redis.smembers("lobby:%s:members" % self.id)
+
+    def getActiveMembers(self):
+        """
+        Return members that are in the lobby
+        """
+        return redis.smembers("lobby:%s:memberslive" % self.id)
 
     def sendAction(self, action):
         action['lobby'] = self.id
@@ -440,4 +466,11 @@ if __name__ == "__main__":
     u.username = "test"
     u.steamid = 1337
     u.save()
+
+    u1 = User()
+    u1.username = "Yolo Swaggings"
+    u1.steamid = 1333337
+    u1.save()
+
+    u1.friendRequest(u)
     print "Test User: %s" % u.id
