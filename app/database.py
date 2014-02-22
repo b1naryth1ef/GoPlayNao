@@ -1,6 +1,7 @@
 from peewee import *
 from playhouse.postgres_ext import *
 from datetime import *
+import dateutil.relativedelta
 from flask import request, g
 from steam import getSteamAPI
 import bcrypt, json, redis, random, string, time
@@ -8,6 +9,10 @@ import bcrypt, json, redis, random, string, time
 db = PostgresqlExtDatabase('ns2pug', user="b1n", password="b1n", threadlocals=True)
 redis = redis.Redis()
 steam = getSteamAPI()
+
+attrs = ['years', 'months', 'days', 'hours', 'minutes', 'seconds']
+human_readable = lambda delta: ['%d %s' % (getattr(delta, attr), getattr(delta, attr) > 1 and attr or attr[:-1]) for attr in attrs if getattr(delta, attr)]
+
 
 SESSION_ID_SIZE = 32
 get_random_number = lambda size: ''.join([random.choice(string.ascii_letters + string.digits) for i in range(size)])
@@ -78,6 +83,7 @@ class User(BaseModel):
         i.to_user = user
         i.invitetype = InviteType.INVITE_TYPE_FRIEND
         i.save()
+        i.notify()
 
     def getStats(self):
         DAY = (60 * 60 * 24)
@@ -87,6 +93,10 @@ class User(BaseModel):
             b.append([(time.time() - (DAY * day)) * 1000, random.randint(1, 5)])
 
         return {"skill": a, "kd": b}
+
+    def push(self, data):
+        print "PUSH!"
+        redis.publish("user:%s:push" % self.id, json.dumps(data))
 
 class Ban(BaseModel):
     user = ForeignKeyField(User, null=True)
@@ -322,6 +332,20 @@ class Invite(BaseModel):
         return (((Invite.from_user == a) & (Invite.to_user == b)) |
             ((Invite.from_user == b) & (Invite.to_user == a)))
 
+    def getMsg(self):
+        if self.invitetype == InviteType.INVITE_TYPE_LOBBY:
+            return "%s has invited you to a lobby!" % (self.from_user.username)
+        elif self.invitetype == InviteType.INVITE_TYPE_FRIEND:
+            return "%s has invited you to be their friend!" % (self.from_user.username)
+        return ""
+
+    def getUrl(self):
+        if self.invitetype == InviteType.INVITE_TYPE_LOBBY:
+            return "/lobby/%s" % self.ref
+        elif self.invitetype == InviteType.INVITE_TYPE_FRIEND:
+            return "/friends"
+        return ""        
+
     @classmethod
     def createLobbyInvite(cls, fromu, tou, lobby):
         self = cls()
@@ -331,6 +355,15 @@ class Invite(BaseModel):
         self.ref = lobby.id
         self.save()
         return self
+
+    def notify(self):
+        self.to_user.push({
+            "type": "invite",
+            "data": {
+                "msg": self.getMsg(),
+                "url": self.getUrl()
+            }
+        })
 
     def format(self):
         return {

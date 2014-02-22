@@ -109,7 +109,7 @@ def socket_loop(data):
         if item['type'] == 'message':
             data = json.loads(item['data'])
             print "Sending %s" % data
-            if data['lobby']:
+            if 'lobby' in data:
                 s.emit("lobby", data)
             else:
                 s.emit('global', data)

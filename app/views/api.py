@@ -373,7 +373,7 @@ def api_users_search():
         "results": [i.format() for i in u]
     })
 
-@api.route("/users/friend", methods=['POST'])
+@api.route("/users/friend",) #methods=['POST'])
 @authed()
 def api_users_friend():
     args, success = require(id=int)
@@ -399,7 +399,7 @@ def api_users_friend():
         })
 
     waiting = Invite.select().where(
-        Invite.getQuery(g.user, u) &
+        (Invite.getQuery(g.user, u)) &
         (Invite.state == InviteState.INVITE_WAITING))
 
     # If there is an invite waiting to be accepted by either party, display that
@@ -407,8 +407,8 @@ def api_users_friend():
         w = waiting.get()
         if w.from_user == g.user:
             return jsonify({
-                "success": False,
-                "msg": "You've already invited that user to be your friend!"
+               "success": False,
+               "msg": "You've already invited that user to be your friend!"
             })
         else:
             return jsonify({
@@ -418,7 +418,7 @@ def api_users_friend():
 
     denied = Invite.select().where(
         (Invite.to_user == u) &
-        (Invite.from_user == g.user)
+        (Invite.from_user == g.user) &
         (Invite.state == InviteState.INVITE_DENIED))
 
     # If WE have invited that user, and they denied, display the invite as waiting
@@ -485,7 +485,7 @@ def api_invites_accept():
         })
 
     try:
-        i = Invite.select().where(Invite.id == args.id).get()
+        i = Invite.select().where((Invite.id == args.id) & (Invite.state == InviteState.INVITE_WAITING)).get()
     except Invite.DoesNotExist:
         return jsonify({
             "success": False,
@@ -494,7 +494,8 @@ def api_invites_accept():
 
     if i.invitetype == InviteType.INVITE_TYPE_FRIEND:
         Friendship.create(g.user, i.to_user, i)
-        i.update(state=InviteState.INVITE_ACCEPTED).where(Invite.id == id).execute()
+        i.state = InviteState.INVITE_ACCEPTED
+        i.save()
         return jsonify({"success": True})
 
 @api.route("/invites/deny", methods=['POST'])
@@ -509,12 +510,13 @@ def api_invites_deny():
         })
 
     try:
-        i = Invite.select().where(Invite.id == args.id).get()
+        i = Invite.select().where((Invite.id == args.id) & (Invite.state == InviteState.INVITE_WAITING)).get()
     except Invite.DoesNotExist:
         return jsonify({
             "success": False,
             "msg": "Invalid invite ID!"
         })
 
-    i.update(state=InviteState.INVITE_DENIED).where(Invite.id == id).execute()
+    i.state = InviteState.INVITE_DENIED
+    i.save()
     return jsonify({"success": True})

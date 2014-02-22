@@ -29,7 +29,8 @@ def public_lobby(id=None):
 def public_friends():
     requests = [i for i in Invite.select().where(
         (Invite.invitetype == InviteType.INVITE_TYPE_FRIEND) &
-        (Invite.to_user == g.user))]
+        (Invite.to_user == g.user) &
+        (Invite.state == InviteState.INVITE_WAITING))]
     friends = Friendship.select().where(((Friendship.usera == g.user) | (Friendship.userb == g.user))
         & Friendship.active == True)
     friends = [i for i in friends]
@@ -39,7 +40,7 @@ def public_friends():
 @public.route("/u/<user>")
 def public_user(user=None):
     try:
-        u = User.select().where(User.username ** user).get()
+        u = User.select().where((User.username ** user) | (User.id == user)).get()
     except User.DoesNotExist:
         return flashy("No such user!")
 

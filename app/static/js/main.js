@@ -1,9 +1,23 @@
+
+
 var LobbyState = {
     LOBBY_STATE_CREATE: 1,
     LOBBY_STATE_IDLE: 2,
     LOBBY_STATE_SEARCH: 3,
     LOBBY_STATE_PLAY: 4,
     LOBBY_STATE_UNUSED: 5
+}
+
+
+var JST = {
+    invite: _.template('<li id="side-bar-invite"><div class="col-left">'+
+            '<span class="label label-info"><i class="icon-envelope"></i></span></div>'+
+            '<div class="col-right with-margin">'+
+            '<a href="<%= url %>"><span class="message"><%= msg %></span></a></li>')
+}
+
+var SOUNDS = {
+    invite: "/static/sound/notification.mp3"
 }
 
 var pug = {
@@ -86,8 +100,29 @@ var pug = {
 
     handleGlobal: function (msg) {
         console.log(msg)
-        if (msg.type == "stats") {
-            pug.handleStats(msg.data);
+
+        switch (msg.type) {
+            case "stats":
+                pug.handleStats(msg.data);
+                break;
+            case "invite":
+                pug.handleInvite(msg.data);
+                break;
+        }
+    },
+
+    handleInvite: function (data) {
+        var sbn = $("#side-bar-notifications");
+        sbn.append(JST.invite(data))
+
+        flashTitle("New Invitation!");
+
+        // Play Invite Sounds
+        new Audio(SOUNDS.invite).play()
+
+        if (sbn.children().length > 4) {
+            var obj = sbn.children()[4];
+            $(obj).fadeOut().remove();
         }
     },
 
