@@ -1,9 +1,6 @@
 from flask import Flask, g, session, request
 from flask.ext.openid import OpenID
 from steam import getSteamAPI
-
-from views.public import public
-from views.api import api
 from database import User, redis, Session, Lobby
 from util import flashy, limit
 
@@ -12,10 +9,13 @@ from worker import run
 import sys, os, time, thread, json
 
 app = Flask(__name__)
+#sockets = Sockets(app)
 oid = OpenID(app)
 steam = getSteamAPI()
 app.secret_key = "change_me"
 
+from views.public import public
+from views.api import api
 app.register_blueprint(public)
 app.register_blueprint(api)
 

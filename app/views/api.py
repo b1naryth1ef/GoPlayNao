@@ -5,6 +5,22 @@ import time, json
 
 api = Blueprint('api', __name__, url_prefix='/api')
 
+#from app import sockets
+
+#@sockets.route("/api/poll")
+# @api.route("/poll")
+# @authed()
+# @socket()
+# def api_lobby_poll_socket(ws):
+#     # Loop over redis, pull in data, forward too frontend
+#     print "wow..."
+#     ps = redis.pubsub()
+#     ps.subscribe("user:%s:push" % g.user.id)
+#     for item in ps.listen():
+#         if item['type'] == 'message':
+#             ws.send(item['data'])
+#     return
+
 @api.route("/info")
 @limit(60)
 def api_info():
@@ -278,22 +294,6 @@ def api_lobby_info():
     return jsonify({
         "success": True,
         "lobby": lobby.format()
-    })
-
-@api.route("/lobby/poll")
-@authed()
-def api_lobby_poll():
-    args, _ = require(id=int, last=int)
-
-    lobby = pre_lobby(args.id)
-    if not isinstance(lobby, Lobby):
-        return lobby
-
-    data = lobby.poll(args.last or 0)
-    return jsonify({
-        "success": True,
-        "size": len(data),
-        "data": data
     })
 
 @api.route("/lobby/chat", methods=['POST'])

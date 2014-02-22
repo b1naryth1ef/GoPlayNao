@@ -14,6 +14,7 @@ var pug = {
     pollLobbyInterval: null,
     getStatsInterval: null,
     bg: false,
+    ws: null,
 
     pushurl: function(url) {
         if (history) {
@@ -70,6 +71,13 @@ var pug = {
         $(".sidebar-search-results .close").click(function () {
             $(".sidebar-search-results").slideUp(200)
         });
+
+        // Start up some socket shit dawg
+        port = "5001" //location.port ? ":"+location.port : ""
+        pug.ws = new WebSocket("ws://" + document.domain + port + "/poll")
+        pug.ws.onmessage = function (e) {
+            console.log(e.data);
+        }
     },
 
     lobby: function (id) {
@@ -282,6 +290,7 @@ var pug = {
     },
 
     pollLobby: function(first) {
+        return
         first = (first == true)
         $.ajax("/api/lobby/poll", {
             data: {
@@ -297,9 +306,14 @@ var pug = {
                         if (m.type === "chat" && (m.id != USER.id || first)) {
                             pug.lobbyAddChat(m.from, m.msg)
                         } else if ((m.type === "join" || m.type === "quit") && !first){
-                            pug.lobbyAddAction(m.msg, "success", !first);
-                            if (m.type == "join") { pug.lobbyAddMember(m.member); }
-                            if (m.type == "quit") { pug.lobbyRmvMember(m.member.id); }
+                            if (m.type == "join") {
+                                pug.lobbyAddMember(m.member);
+                                pug.lobbyAddAction(m.msg, "success", !first);
+                            }
+                            if (m.type == "quit") {
+                                pug.lobbyRmvMember(m.member.id);
+                                pug.lobbyAddAction(m.msg, "danger", !first);
+                            }
                         } else if (m.type == "state") {
                             if (!first) { pug.lobbyHandleState(m.state); }
                             pug.lobbyAddAction(m.msg, "warning", !first);
@@ -319,8 +333,8 @@ var pug = {
 
     // Loads inital stats and queues for refresh
     runGetStats: function() {
-        pug.getStatesInterval = setInterval(pug.getStats, 1000 * (pug.bg ? 120 : 15));
-        pug.getStats();
+        // pug.getStatesInterval = setInterval(pug.getStats, 1000 * (pug.bg ? 120 : 15));
+        // pug.getStats();
     },
 
     // Loads stats from the backend and dynamically loads them into values
@@ -406,24 +420,24 @@ var pug = {
     },
 }
 
-var backgroundTimeout = null;
-$(window).focus(function() {
-    // Woah wait up guys I'm back!
-    clearTimeout(backgroundTimeout);
-    pug.bg = false;
-            pug.lobbyPollStart();
-        pug.runGetStats();
-});
+// var backgroundTimeout = null;
+// $(window).focus(function() {
+//     // Woah wait up guys I'm back!
+//     clearTimeout(backgroundTimeout);
+//     pug.bg = false;
+//             pug.lobbyPollStart();
+//         pug.runGetStats();
+// });
 
-$(window).blur(function() {
-    // If the client window is idle for more than 15 minutes, all the refresh timers get set long
-    //  to prevent major spamming of the backend
-    backgroundTimeout = setTimeout(function () {
-        pug.bg = true;
-        pug.lobbyPollStart();
-        pug.runGetStats();
-    }, 60000 * 15)
-});
+// $(window).blur(function() {
+//     // If the client window is idle for more than 15 minutes, all the refresh timers get set long
+//     //  to prevent major spamming of the backend
+//     backgroundTimeout = setTimeout(function () {
+//         pug.bg = true;
+//         pug.lobbyPollStart();
+//         pug.runGetStats();
+//     }, 60000 * 15)
+// });
 
 $(document).ready(function () {
     

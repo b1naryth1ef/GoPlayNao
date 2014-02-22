@@ -15,16 +15,19 @@ class DummyObj(object):
         return None
 
 def require(**need):
-    result, missing = {}, False
+    result, missing, error = {}, False, []
     for k, v in need.items():
         if k not in request.values:
             missing = True
             continue
         try:
             result[k] = v(request.values.get(k))
-        except:
+        except Exception as e:
             missing = True
-    return DummyObj(result), not missing
+            error.append(str(e))
+    obj = DummyObj(result)
+    obj._errors = error
+    return obj, not missing
 
 def authed(level=0, err=None):
     def deco(f):
@@ -68,6 +71,16 @@ def limit(per_minute):
             return f(*args, **kwargs)
         return _f
     return deco
+
+def json_payload_gen(typ):
+    def json_payload(obj):
+        if len(obj) > 8576:
+            raise Exception("Payload size too large!")
+        obj = json.loads(obj)
+        if not isinstance(obj, type):
+            raise Exception("Invalid top-level key!")
+        return obj
+    return json_payload
 
 attrs = ['years', 'months', 'days', 'hours', 'minutes', 'seconds']
 human_readable = lambda delta: ['%d %s' % (getattr(delta, attr), getattr(delta, attr) > 1 and attr or attr[:-1]) for attr in attrs if getattr(delta, attr)]

@@ -191,24 +191,10 @@ class Lobby(BaseModel):
     created = DateTimeField(default=datetime.utcnow)
     config = JSONField()
 
-    def canJoin(self, user):
-        if self.owner == user:
-            return True
-
-        if user.id in self.members:
-            return True
-
-        for i in Invite.select().where((Invite.ref == self.id) & (Invite.to_user == user)):
-            if i.valid():
-                return True
-
-        return False
-
     @classmethod
     def getNew(cls, user):
         self = cls()
         self.owner = user
-        self.members = [user.id]
         self.invited = []
 
         # Default Config
@@ -231,11 +217,24 @@ class Lobby(BaseModel):
         self.save()
         return self
 
+    def canJoin(self, user):
+        if self.owner == user:
+            return True
+
+        if user.id in self.getMembers():
+            return True
+
+        for i in Invite.select().where((Invite.ref == self.id) & (Invite.to_user == user)):
+            if i.valid():
+                return True
+
+        return False
+
     def format(self, tiny=True):
         base = {
             "id": self.id,
             "state": self.state,
-            "members": [User.select().where(User.id == i).get().format() for i in self.members],
+            "members": [User.select().where(User.id == i).get().format() for i in self.getMembers()],
             "owner": self.owner.id
         }
         if tiny: return base
@@ -250,14 +249,13 @@ class Lobby(BaseModel):
             "type": "chat"
         })
 
-    def sendAction(self, action):
-        redis.rpush("action:lobby:%s" % self.id, json.dumps(action))
-        if redis.llen("action:lobby:%s" % self.id) > 250:
-            redis.lpop("action:lobby:%s" % self.id)
+    def getMembers(self):
+        return redis.smembers("lobby:%s:members" % self.id)
 
-    def poll(self, start):
-        redis.set("lobby:ping:%s:%s" % (self.id, g.user.id), time.time())
-        return map(json.loads, redis.lrange("action:lobby:%s" % self.id, start, -1))
+    def sendAction(self, action):
+        action['lobby'] = self.id
+        for user in self.members:
+            redis.publish("user:%s:push" % user, json.dumps(action))
 
     def startQueue(self):
         if self.state == LobbyState.LOBBY_STATE_SEARCH: return
@@ -280,11 +278,16 @@ class Lobby(BaseModel):
         })
 
     def cleanup(self):
-        redis.delete("lobby:ping:%s:*" % self.id)
-        redis.delete("action:lobby:%s" % self.id)
+        redis.delete("lobby:%s:*" % self.id)
 
-class Notification(BaseModel):
-    data = JSONField()
+    def joinLobby(self, u):
+        self.sendAction({
+            "type": "join",
+            "member": u.format(),
+            "msg": "%s joined the lobby" % u.username
+        })
+        redis.sadd("lobby:%s:members" % self.id, u.id)
+
 
 class InviteType(object):
     INVITE_TYPE_LOBBY = 1
