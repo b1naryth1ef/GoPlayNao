@@ -12,10 +12,13 @@ def schedule(**kwargs):
         return f
     return deco
 
-def repeat(f):
-    def deco():
-        while True:
-            f()
+def repeat(delay):
+    def deco(f):
+        def _f():
+            while True:
+                time.sleep(delay)
+                f()
+        return _f
     return deco
 
 LOBBY_TIMEOUT = 15
@@ -49,6 +52,29 @@ def task_lobby_cleanup():
         lobby.state = LobbyState.LOBBY_STATE_UNUSED
         lobby.cleanup()
         lobby.save()
+
+
+incs = 123
+@schedule(seconds=5)
+def task_stats_cache():
+    global incs
+    incs += 1
+    data = {
+        "current": {
+            "players": {
+                "searching": incs,
+                "playing": 300
+            },
+            "servers": {
+                "open": 5,
+                "used": 22,
+            },
+            "matches": 38
+        }
+    }
+
+    redis.set("stats_cache", json.dumps(data))
+    redis.publish("global", json.dumps({"type": "stats", "data": data}))
 
 
 class MatchFinder(object):
@@ -108,7 +134,7 @@ class MatchFinder(object):
 
 FINDER = MatchFinder()
 
-@repeat
+@repeat(5)
 def task_find_matches():
     FINDER.run()
 

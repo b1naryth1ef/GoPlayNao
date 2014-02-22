@@ -1,25 +1,10 @@
-from flask import Blueprint, render_template, flash, redirect, request, g, session, jsonify
+from flask import Blueprint, render_template, flash, redirect, request, g, session, jsonify, Response
+from flask.ext.socketio import emit
 from database import *
 from util import *
 import time, json
 
 api = Blueprint('api', __name__, url_prefix='/api')
-
-#from app import sockets
-
-#@sockets.route("/api/poll")
-# @api.route("/poll")
-# @authed()
-# @socket()
-# def api_lobby_poll_socket(ws):
-#     # Loop over redis, pull in data, forward too frontend
-#     print "wow..."
-#     ps = redis.pubsub()
-#     ps.subscribe("user:%s:push" % g.user.id)
-#     for item in ps.listen():
-#         if item['type'] == 'message':
-#             ws.send(item['data'])
-#     return
 
 @api.route("/info")
 @limit(60)
@@ -232,19 +217,7 @@ def api_stats():
 
     This endpoint is limited to 60 requests per minute
     """
-    return jsonify({
-        "current": {
-            "players": {
-                "searching": 123,
-                "playing": 300
-            },
-            "servers": {
-                "open": 5,
-                "used": 22,
-            },
-            "matches": 38
-        }
-    })
+    return Response(response=redis.get("stats_cache") or "{}", status=200, mimetype="application/json")
 
 @api.route("/lobby/create", methods=['POST'])
 @authed()
@@ -275,7 +248,7 @@ def pre_lobby(id):
             "msg": "No lobby with that id exists!"
         })
 
-    if not g.user.id in lobby.members:
+    if not str(g.user.id) in lobby.getMembers():
         return jsonify({
             "success": False,
             "msg": "You do not have permission to that lobby!"
@@ -359,7 +332,7 @@ def api_lobby_action():
 
     if args.action == "start":
         errors = []
-        for member in lobby.members:
+        for member in lobby.getMembers():
             u = User.select().where(User.id == member).get()
             if not u.canPlay():
                 errors.append(u.username)

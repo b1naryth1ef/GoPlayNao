@@ -9,12 +9,12 @@ var LobbyState = {
 var pug = {
     lobbyid: null,
     lobbypoll: 0,
-    lobby: null,
+    lobbydata: null,
     config: {},
     pollLobbyInterval: null,
     getStatsInterval: null,
     bg: false,
-    ws: null,
+    socket: null,
 
     pushurl: function(url) {
         if (history) {
@@ -73,21 +73,58 @@ var pug = {
         });
 
         // Start up some socket shit dawg
-        port = "5001" //location.port ? ":"+location.port : ""
-        pug.ws = new WebSocket("ws://" + document.domain + port + "/poll")
-        pug.ws.onmessage = function (e) {
-            console.log(e.data);
+        var port = location.port ? ":"+location.port : ""
+        pug.socket = io.connect('http://' + document.domain + port + "/api/poll");
+        pug.socket.on('lobby', pug.lobbyHandleMsg);
+        pug.socket.on('global', pug.handleGlobal);
+
+        // This interval makes sure we stay active in lobbies/etc
+        setInterval(function () {
+            pug.socket.emit("ping", {ping: 1})
+        }, 1000 * 5)
+    },
+
+    handleGlobal: function (msg) {
+        console.log(msg)
+        if (msg.type == "stats") {
+            pug.handleStats(msg.data);
         }
     },
 
     lobby: function (id) {
         pug.vglobal();
-        pug.runGetStats();
         if (id) {
             pug.lobbyJoin(id);
         } else {
             $("#lobby").hide();
             $("#btn-create-lobby").click(pug.lobbyCreate);
+        }
+    },
+
+    lobbyHandleMsg: function (data) {
+        switch(data.type) {
+            case "chat":
+                pug.lobbyAddChat(data.from, data.msg)
+                break;
+            case "join":
+                pug.lobbyAddMember(data.member);
+                pug.lobbyAddAction(data.msg, "success");
+                break;
+            case "quit":
+                pug.lobbyRmvMember(data.member.id);
+                pug.lobbyAddAction(data.msg, "danger");
+                break;
+            case "state":
+                pug.lobbyHandleState(data.state);
+                pug.lobbyAddAction(data.msg, "warning");
+                break;
+            case "msg":
+                pug.lobbyAddAction(data.msg, "danger");
+                break;
+            default:
+                console.log("WTF:")
+                console.log(data)
+                break;
         }
     },
 
@@ -121,6 +158,7 @@ var pug = {
             type: "POST",
             data: pug.config,
             success: function(data) {
+                console.log(data)
                 // Well dix, looks like we failed...
                 if (!data.success) {
                     error(data);
@@ -131,31 +169,27 @@ var pug = {
                 pug.lobbyid = data.id;
 
                 pug.pushurl(window.location+"/"+data.id)
-                pug.lobbyRender(data);
+                pug.lobbydata = data;
+                pug.lobbyRender();
             },
             error: error
         })
     },
 
-    lobbyPollStart: function(first) {
-        clearInterval(pug.pollLobbyInterval);
-        pug.pollLobbyInterval = setInterval(pug.pollLobby, 1000 * (pug.bg ? 30 : 2));
-        pug.pollLobby(first)
-    },
-
     lobbyJoin: function(id) {
+        console.log("lobbyJoin")
         if (!pug.lobbyid) {
             pug.lobbyid = id;
         }
-        pug.lobbyPollStart(true);
 
         $.ajax("/api/lobby/info", {
             data: {
                 id: pug.lobbyid
             },
             success: function (data) {
+                console.log(data)
                 if  (data.success) {
-                    pug.lobby = data.lobby
+                    pug.lobbydata = data.lobby
                     pug.lobbyRender()
                 }
             }
@@ -167,7 +201,7 @@ var pug = {
         '<% if (leader) { %><span class="label label-danger lobby-kick">X</span><% } %></td></tr>'),
 
     lobbyAddMember: function(m) {
-        var isLeader = (USER.id == pug.lobby.owner)
+        var isLeader = (USER.id == pug.lobbydata.owner)
         $("#lobby-member-list").append(pug.lobbyMemberTemplate({m: m, leader: isLeader}));
     },
 
@@ -183,13 +217,14 @@ var pug = {
             start: 'bottom',
         });
 
-        if (pug.lobby.owner != USER.id) {
+        if (pug.lobbydata.owner != USER.id) {
             $(".not-owner").show()
         } else {
             $(".owner").show()
         }
 
-        $.each(pug.lobby.members, function(_, v) {
+        $.each(pug.lobbydata.members, function(_, v) {
+            console.log(v);
            pug.lobbyAddMember(v)
         })
 
@@ -241,9 +276,6 @@ var pug = {
                 success: function(data) {
                     if (data.success) {
                         $("#lobby-chat-text").val("");
-                        pug.lobbyAddChat(USER.name, msg, true)
-                    } else {
-                        console.log(data.msg)
                     }
                 }
             })
@@ -256,7 +288,7 @@ var pug = {
                 send_lobby_chat();
             }
         });
-        pug.lobbyHandleState(pug.lobby.state)
+        pug.lobbyHandleState(pug.lobbydata.state)
 
         $("#lobby-invite-btn").click(function () {
             $("#invite-modal").modal('show')
@@ -278,79 +310,31 @@ var pug = {
         }
     },
 
-    lobbyAddChat: function(from, msg, adjust) {
+    lobbyAddChat: function(from, msg) {
         $("#lobby-chat-list").append('<li class="list-group-item basic-alert"><b>'+from+':</b> '+msg+'</li>')
-        if (adjust) { $("#lobby-chat-list").animate({ scrollTop: $('#lobby-chat-list')[0].scrollHeight}, 700);}
+        $("#lobby-chat-list").animate({ scrollTop: $('#lobby-chat-list')[0].scrollHeight}, 700);
     },
 
-    lobbyAddAction: function(text, color, adjust) {
+    lobbyAddAction: function(text, color) {
         var extra = color ? ' class="text-'+color+'" ' : ''
         $("#lobby-chat-list").append('<li class="list-group-item basic-alert"><i'+extra+'>'+text+'</i></li>')
-        if (adjust) { $("#lobby-chat-list").animate({ scrollTop: $('#lobby-chat-list')[0].scrollHeight}, 700);}
+        $("#lobby-chat-list").animate({ scrollTop: $('#lobby-chat-list')[0].scrollHeight}, 700);
     },
 
-    pollLobby: function(first) {
-        return
-        first = (first == true)
-        $.ajax("/api/lobby/poll", {
-            data: {
-                id: pug.lobbyid,
-                last: pug.lobbypoll
-            },
-            success: function(data) {
-                if (data.success) {
-                    pug.lobbypoll += data.size
-
-                    for (mi in data.data) {
-                        m = data.data[mi]
-                        if (m.type === "chat" && (m.id != USER.id || first)) {
-                            pug.lobbyAddChat(m.from, m.msg)
-                        } else if ((m.type === "join" || m.type === "quit") && !first){
-                            if (m.type == "join") {
-                                pug.lobbyAddMember(m.member);
-                                pug.lobbyAddAction(m.msg, "success", !first);
-                            }
-                            if (m.type == "quit") {
-                                pug.lobbyRmvMember(m.member.id);
-                                pug.lobbyAddAction(m.msg, "danger", !first);
-                            }
-                        } else if (m.type == "state") {
-                            if (!first) { pug.lobbyHandleState(m.state); }
-                            pug.lobbyAddAction(m.msg, "warning", !first);
-                        } else if (m.type == "msg") {
-                            pug.lobbyAddAction(m.msg, "danger", !first);
-                        } else if (m.type == "timeout") {
-                            pug.lobbyRmvMember(m.member.id);
-                            pug.lobbyAddAction(m.msg, "danger", !first);
-                        }
-                    }
-
-                    if (first) { $("#lobby-chat-list").animate({ scrollTop: $('#lobby-chat-list')[0].scrollHeight}, 700);}
-                }
+    handleStats: function (data) {
+        $(".apistats").each(function (_, i) {
+            var id = $(i).attr("id").split(".")
+            var base = data;
+            for (get in id) {
+                base = base[id[get]]
             }
+            $(i).text(base)
         })
-    },
-
-    // Loads inital stats and queues for refresh
-    runGetStats: function() {
-        // pug.getStatesInterval = setInterval(pug.getStats, 1000 * (pug.bg ? 120 : 15));
-        // pug.getStats();
     },
 
     // Loads stats from the backend and dynamically loads them into values
     getStats: function () {
-        $.ajax("/api/stats", {
-            success: function (data) {
-                $(".apistats").each(function (_, i) {
-                    var id = $(i).attr("id").split(".")
-                    var base = data;
-                    for (get in id) {
-                        base = base[id[get]]
-                    }
-                    $(i).text(base)
-                })
-            }
-        })
+        $.ajax("/api/stats", {success: pug.handleStats})
     },
 
     friends: function() {
@@ -440,5 +424,5 @@ var pug = {
 // });
 
 $(document).ready(function () {
-    
+    pug.getStats();
 });

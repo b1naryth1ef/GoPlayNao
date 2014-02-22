@@ -185,7 +185,7 @@ class LobbyState(object):
 
 class Lobby(BaseModel):
     owner = ForeignKeyField(User)
-    members = ArrayField(IntegerField)
+    # members = ArrayField(IntegerField)
     private = BooleanField(default=True)
     state = IntegerField(default=LobbyState.LOBBY_STATE_CREATE)
     created = DateTimeField(default=datetime.utcnow)
@@ -215,13 +215,14 @@ class Lobby(BaseModel):
             "ringer": False
         })
         self.save()
+        self.joinLobby(user)
         return self
 
     def canJoin(self, user):
         if self.owner == user:
             return True
 
-        if user.id in self.getMembers():
+        if str(user.id) in self.getMembers():
             return True
 
         for i in Invite.select().where((Invite.ref == self.id) & (Invite.to_user == user)):
@@ -254,7 +255,7 @@ class Lobby(BaseModel):
 
     def sendAction(self, action):
         action['lobby'] = self.id
-        for user in self.members:
+        for user in self.getMembers():
             redis.publish("user:%s:push" % user, json.dumps(action))
 
     def startQueue(self):

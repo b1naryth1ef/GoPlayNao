@@ -1,21 +1,29 @@
+# Flask
 from flask import Flask, g, session, request
 from flask.ext.openid import OpenID
+from flask.ext.socketio import SocketIO, emit
+
+# Util
 from steam import getSteamAPI
 from database import User, redis, Session, Lobby
 from util import flashy, limit
 
+# Internal
 from worker import run
-
-import sys, os, time, thread, json
-
-app = Flask(__name__)
-#sockets = Sockets(app)
-oid = OpenID(app)
-steam = getSteamAPI()
-app.secret_key = "change_me"
-
 from views.public import public
 from views.api import api
+
+# Global
+import sys, os, time, thread, json, gevent
+
+app = Flask(__name__)
+app.secret_key = "change_me"
+
+socketio = SocketIO(app)
+oid = OpenID(app)
+
+steam = getSteamAPI()
+
 app.register_blueprint(public)
 app.register_blueprint(api)
 
@@ -93,9 +101,54 @@ def beforeRequest():
             return jsonify({"success": False, "error": 2, "msg": "Session Corrupted!"})
         g.server = s
 
+def socket_loop(data):
+    s, user = data
+    ps = redis.pubsub()
+    ps.subscribe(["global", "user:%s:push" % user.id])
+    for item in ps.listen():
+        if item['type'] == 'message':
+            data = json.loads(item['data'])
+            print "Sending %s" % data
+            if data['lobby']:
+                s.emit("lobby", data)
+            else:
+                s.emit('global', data)
+
+@socketio.on('connect', namespace="/api/poll")
+def socket_connect():
+    """
+    This has some fucking magical ass shit in it. Lets explain.
+
+    Flask has this awesome little thing called the request context, which
+    is the reason things like "request" and "g" work the way they do. Sure,
+    it's a ton of magic, but it's usefull. Unless you use websockets and need
+    an ongoing loop. This function HAS to exit for socketio too parse NEW
+    emissions from the client, so we start a greenlet joined too the socket
+    (when the socket dies, the greenlet will too AFAIK), and pass it the WS.
+
+    This took me hours. :(
+    """
+    beforeRequest()
+    ns = request.namespace.socket['/api/poll']
+    ns.spawn(socket_loop, (request.namespace.socket['/api/poll'], g.user))
+
+@socketio.on("ping", namespace="/api/poll")
+def socket_ping(data):
+    # We pull the user id ourselves to avoid excessive DB queries
+    if request.values.get("sid"):
+        value = redis.get("ss:%s" % request.values.get("sid"))
+        if value:
+            redis.set("user:%s:ping" % value, time.time())
+
 @app.template_filter("json")
 def filter_json(i):
     return json.dumps(i)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    import logging
+
+    logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s %(levelname)s %(message)s',
+                    filename='log.log',
+                    filemode='w')
+    socketio.run(app)
