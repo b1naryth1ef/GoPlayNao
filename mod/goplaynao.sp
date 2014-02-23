@@ -3,8 +3,6 @@
 #include <sourcemod>
 #include <sdktools>
 #include <sdkhooks>
-#include <cURL>
-#include <json>
 
 #define VERSION "0.1"
 
@@ -17,38 +15,81 @@ public Plugin:myinfo =
     url = "github.com/b1naryth1ef/goplaynao"
 }
 
-new CURL_Default_opt[][2] = {
-    {_:CURLOPT_NOSIGNAL,1},
-    {_:CURLOPT_NOPROGRESS,1},
-    {_:CURLOPT_TIMEOUT,30},
-    {_:CURLOPT_CONNECTTIMEOUT,60},
-    {_:CURLOPT_VERBOSE,0}
-};
 
-
-#define CURL_DEFAULT_OPT(%1) curl_easy_setopt_int_array(%1, CURL_Default_opt, sizeof(CURL_Default_opt))
-
-new Handle:check_loop = INVALID_HANDLE;
-
+new Handle:file = INVALID_HANDLE;
+new Handle:gpn_matchid = INVALID_HANDLE;
+new Handle:gpn_clients = INVALID_HANDLE;
 
 public OnPluginStart() {
-    check_loop = CreateTimer(10.0, CheckForMatch, _, TIMER_REPEAT);
+    gpn_matchid = CreateConVar("gpn_matchid", "0", "The Match ID for the current match", FCVAR_PROTECTED);
+    gpn_clients = CreateConVar("gpn_clients", "", "The list of clients for the current match", FCVAR_PROTECTED);
+    HookEvent("player_death", Event_PlayerDeath, EventHookMode_Post);
+    HookEvent("player_connect", Event_PlayerConnect, EventHookMode_Pre);
 }
 
-public Action:CheckForMatch(Handle:timer)
-{
-    new Handle:curl = curl_easy_init();
-    curl_easy_setopt_string(curl, CURLOPT_URL, "http://pug.hydr0.com/api/servers/poll");
-    curl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYHOST, 2);
-    curl_easy_setopt_string(curl, CURLOPT_POSTFIELDS, "server=???&hash=???");
-    curl_easy_perform_thread(curl, OnComplete);
+public MatchStart() {
+    new _matchid;
+    if (gpn_matchid == INVALID_HANDLE) {
+        _matchid = 0;
+    } else {
+        _matchid = GetConVarInt(gpn_matchid);
+    }
+
+    decl String:buffer[512];
+    Format(buffer, sizeof(buffer), "match-log-%d.txt", _matchid);
+    file = OpenFile(buffer, "w");
+    LogLine("STARTED!");
 }
 
-/*
-- Poll backend for matches
-- Setup matches with map
-- Only allow players in match to join
-- GOTV/Demo (low-prio)
-- Track statistics in local file-buffer
-*/
+public OnPluginStop() {
+    FlushFile(file);
+    CloseHandle(file);
+}
+
+public LogLine(const String:data[]) {
+    if (file == INVALID_HANDLE) {
+        return;
+    }
+
+    decl String:buffer[2048];
+    Format(buffer, sizeof(buffer), "%d|%s", GetTime(), data);
+    WriteFileLine(file, buffer);
+}
+
+public Action:Event_PlayerConnect(Handle:event, const String:name[], bool:dontBroadcast) {
+    decl String:networkid[128];
+    decl String:_clients[2048];
+    GetEventString(event, "networkid", networkid, sizeof(networkid));
+    GetConVarString(gpn_clients, _clients, sizeof(_clients));
+
+    if (!GetEventBool(event, "bot")) {
+        decl String:addr[128];
+        decl String:buffer[2048];
+        GetEventString(event, "address", addr, sizeof(addr));
+        Format(buffer, sizeof(buffer), "PlayerConnect,%L,%s,%s",
+            GetEventInt(event, "userid"),
+            addr,
+            networkid);
+        LogLine(buffer);
+    }
+
+    if (StrContains(_clients, networkid) <= 0) {
+        KickClient(GetEventInt(event, "userid"), "You are not part of this matchmaking session");
+    }
+
+    return Plugin_Continue;
+}
+
+public Action:Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast) {
+    decl String:buffer[2048];
+    decl String:weapon[64];
+    GetEventString(event, "weapon", weapon, sizeof(weapon));
+    Format(buffer, sizeof(buffer), "PlayerDeath,%L,%L,%L,%s,%d,%d", 
+        GetEventInt(event, "userid"),
+        GetEventInt(event, "attacker"),
+        GetEventInt(event, "assister"),
+        weapon,
+        GetEventBool(event, "headshot"),
+        GetEventInt(event, "penetrated"));
+    LogLine(buffer);
+}

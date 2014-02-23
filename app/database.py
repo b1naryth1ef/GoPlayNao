@@ -348,7 +348,7 @@ class Invite(BaseModel):
     duration = IntegerField(default=0)
 
     def valid(self):
-        if duration:
+        if self.duration:
             if (self.created + relativedelta(seconds=self.duration)) < datetime.utcnow():
                 return False
         return True

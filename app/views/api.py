@@ -456,6 +456,12 @@ def api_users_friend():
             "msg": "You must give a user id to friend a user!"
         })
 
+    if args.id == g.user.id:
+        return jsonify({
+            "success": False,
+            "msg": "You cannot friend yourself!"
+        })
+
     try:
         u = User.select().where(User.id == args.id).get()
     except User.DoesNotExist:

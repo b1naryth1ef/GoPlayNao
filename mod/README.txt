@@ -1,0 +1,5 @@
+- Wrapper registers with backend
+- Wrapper polls for match
+- Wrapper starts server w/ arguments
+    - Match ID
+    - Clients (String "steamid,steamid,steamid,steamid")
