@@ -1,10 +1,13 @@
-import time, random, thread
+import time, random, thread, json
+from steam import getSteamAPI
 from database import *
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
 
 schedules = {}
 tasks = {}
+
+s = getSteamAPI()
 
 def schedule(**kwargs):
     def deco(f):
@@ -25,7 +28,7 @@ LOBBY_TIMEOUT = 15
 
 @schedule(seconds=5)
 def task_user_timeout():
-    for lobby in Lobby.select().where((Lobby.state != LobbyState.LOBBY_STATE_UNUSED) & (Lobby.state != LobbyState.LOBBY_STATE_PLAYING)):
+    for lobby in Lobby.select().where((Lobby.state != LobbyState.LOBBY_STATE_UNUSED) & (Lobby.state != LobbyState.LOBBY_STATE_PLAY)):
         for member in lobby.getActiveMembers():
             u = User.select().where(User.id == member).get()
             if (time.time() - float(redis.get("user:%s:lobby:%s:ping" % (lobby.id, member)) or 0)) > 20:
@@ -34,7 +37,7 @@ def task_user_timeout():
                     "member": u.format(),
                     "msg": "%s timed out from the lobby!" % u.username
                 })
-                lobby.members.remove(member)
+                redis.srem("lobby:%s:members" % lobby.id, u.id)
                 lobby.save()
 
 @schedule(seconds=5)
@@ -51,11 +54,11 @@ def task_lobby_timeout():
                 print redis.get("lobby:ping:%s:%s" % (lobby.id, member))
                 print "Cleaning up member!"
                 lobby.sendAction({
-                    "type": "timeout",
+                    "type": "quit",
                     "member": u.format(),
-                    "msg": "%s timedout from the lobby" % u.username
+                    "msg": "%s timed out from the lobby!" % u.username
                 })
-                lobby.members.remove(member)
+                redis.srem("lobby:%s:members" % lobby.id, u.id)
                 lobby.save()
 
 @schedule(minutes=5)
@@ -67,16 +70,41 @@ def task_lobby_cleanup():
         lobby.cleanup()
         lobby.save()
 
+WORKSHOP_ID = "231287804"
 
-incs = 123
-@schedule(seconds=5)
+@schedule(seconds=30)
+def task_load_workshop_maps():
+    q = s.getWorkshopFile(WORKSHOP_ID)
+
+    for item in q.files:
+        map_name = item.title
+        # I don't always yolo...
+        if not item.title.startswith("de_"):
+           map_name = "de_" + item.title.lower()
+
+        for i in redis.zrange("maps", 0, -1):
+            d = json.loads(i)
+            if d['name'] == map_name:
+                redis.zrem("maps", i)
+
+        print "Adding map `%s` to maps list!" % map_name
+        data = {
+            "title": item.title,
+            "name": map_name,
+            "wid": item.id,
+            "images": item.images,
+            "thumb": item.thumb
+        }
+
+        redis.zadd("maps", json.dumps(data), 0)
+
+
+@schedule(seconds=30)
 def task_stats_cache():
-    global incs
-    incs += 1
     data = {
         "current": {
             "players": {
-                "searching": incs,
+                "searching": 120,
                 "playing": 300
             },
             "servers": {

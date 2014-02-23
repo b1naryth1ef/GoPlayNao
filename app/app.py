@@ -68,7 +68,10 @@ def jointest(id):
 @oid.after_login
 def create_or_login(resp):
     match = steam.steam_id_re.search(resp.identity_url)
-    g.user = User.steamGetOrCreate(match.group(1))
+    try:
+        g.user = User.steamGetOrCreate(match.group(1))
+    except Exception as e:
+        return flashy("That user cannot join: %s" % e)
     resp = flashy("Welcome back %s!" % g.user.username, "success")
     resp.set_cookie("sid", g.user.login(), expires=time.time() + Session.LIFETIME)
     return resp

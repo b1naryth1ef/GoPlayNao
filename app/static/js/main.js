@@ -18,8 +18,10 @@ var JST = {
     lobbyFriend: _.template('<tr id="friend-<%= f.id %>"><td><%= f.username %></td>'+
         '<td><a href="" id="<%= f.id %>" class="label label-primary lobby-invite">Invite</a></td></tr>'),
 
-    lobbyMemberTemplate: _.template('<tr id="member-<%= m.id %>"><td><%= m.username %></td>'+
+    lobbyMember: _.template('<tr id="member-<%= m.id %>"><td><%= m.username %></td>'+
         '<% if (leader) { %><td><a href="" class="label label-danger lobby-kick">kick</a></td><% } %></tr>'),
+
+    lobbyMap: _.template('<option style="height: 100px; width: 100px;" data-img-src="<%- images[0] %>/300x200.resizedimage" value="<%= name %>"><%= title %></option>')
 
 }
 
@@ -139,6 +141,19 @@ var pug = {
             pug.lobbyJoin(id);
         } else {
             $("#lobby").hide();
+            $.ajax("/api/maps", {
+                success: function (data) {
+                    _.each(data, function (v) {
+                        $("#lobby-map-list").append(JST.lobbyMap(v))
+                    })
+                    $("#lobby-map-list").imagepicker({
+                        show_label: true,
+                        changed: function (oldv, newv) {
+                            pug.config.maps = newv;
+                        }
+                    })
+                }
+            })
             $("#btn-create-lobby").click(pug.lobbyCreate);
         }
     },
@@ -240,7 +255,7 @@ var pug = {
     },
     lobbyAddMember: function(m) {
         var isLeader = (USER.id == pug.lobbydata.owner)
-        $("#lobby-member-list").append(JST.lobbyMemberTemplate({m: m, leader: isLeader}));
+        $("#lobby-member-list").append(JST.lobbyMember({m: m, leader: isLeader}));
     },
 
     lobbyRmvMember: function(id) {

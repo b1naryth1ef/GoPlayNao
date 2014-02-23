@@ -31,6 +31,21 @@ def api_info():
 
     return jsonify(data)
 
+@api.route("/maps")
+@limit(20)
+def api_maps():
+    level = 0
+    if g.user:
+        level = g.user.level
+
+    data = "["+', '.join(redis.zrangebyscore("maps", min=0, max=level))+"]"
+
+    return Response(
+        response=data,
+        status=200,
+        mimetype="application/json")
+    
+
 @api.route("/bans/list")
 @limit(120)
 def api_bans_list():
@@ -230,7 +245,7 @@ def api_lobby_create():
 
     Returns a lobby object.
     """
-    lobby = Lobby.getNew(g.user)
+    lobby = Lobby.getNew(g.user, request.values.getlist("maps[]"))
     data = lobby.format()
     data['success'] = True
     return jsonify(data)

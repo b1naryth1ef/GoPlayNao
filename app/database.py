@@ -49,6 +49,11 @@ class User(BaseModel):
 
     @classmethod
     def steamGetOrCreate(cls, id):
+        # We do not allow players with an "active" VAC ban on record to play
+        ban = steam.getBanInfo(id)
+        if ban is not None and ban < 365:
+            raise Exception("User has VAC ban that is newer than a year!")
+
         try:
             u = User.select().where(User.steamid == str(id)).get()
         except User.DoesNotExist:
@@ -222,28 +227,19 @@ class Lobby(BaseModel):
     config = JSONField()
 
     @classmethod
-    def getNew(cls, user):
+    def getNew(cls, user, maps=[]):
         self = cls()
         self.owner = user
         self.invited = []
 
         # Default Config
-        self.config = json.dumps({
-            "players": {"min": 6,"max": 12,},
-            "maps": [
-                {'name': 'ns2_summit', 'rank': 0},
-                {'name': 'ns2_tram', 'rank': 0},
-                {'name': 'ns2_mineshaft', 'rank': 0},
-                {'name': 'ns2_docking', 'rank': 0},
-                {'name': 'ns2_veil', 'rank': 0},
-                {'name': 'ns2_refinery', 'rank': 0},
-                {'name': 'ns2_biodome', 'rank': 0},
-                {'name': 'ns2_eclipse', 'rank': 0}
-            ],
+        self.config = {
+            "maps": [],
             "type": "ranked",
-            "duration": "short",
+            "region": 0,
             "ringer": False
-        })
+        }
+        self.config['maps'] = maps
         self.save()
         self.joinLobby(user)
         return self
