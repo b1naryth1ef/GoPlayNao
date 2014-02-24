@@ -14,6 +14,7 @@ class WorkshopEntity(object):
         self.desc = desc
         self.game = game
         self.user = user
+        self.tags = []
 
 class WorkshopFile(WorkshopEntity):
     def __init__(self, *args):
@@ -86,6 +87,7 @@ class SteamAPI(object):
             wf.size = size
             wf.posted = posted
             wf.updated = updated
+            wf.tags = [i[1].text.lower() for i in q(".workshopTags")]
             thumbs = q(".highlight_strip_screenshot")
             base = q(".workshopItemPreviewImageEnlargeable")
             if len(thumbs):

@@ -419,6 +419,30 @@ class Friendship(BaseModel):
     def getNot(self, u):
         return self.usera if self.usera != u else self.userb
 
+class MapType(BaseModel):
+    MAP_TYPE_BOMB = 1
+    MAP_TYPE_HOSTAGE = 2
+
+class Map(BaseModel):
+    title = CharField()
+    name = CharField()
+    image = CharField()
+
+    custom = BooleanField(default=False)
+    level = IntegerField(default=0)
+    mtype = IntegerField()
+
+    def cache_image(self):
+        pass
+
+    def format(self):
+        return {
+            "title": self.title,
+            "name": self.name,
+            "id": self.id,
+            "custom": self.custom
+        }
+
 class Session(object):
     db = redis
 
@@ -453,10 +477,25 @@ class Session(object):
         return cls.db.delete("us:%s" % id)
 
 
+def load_default_maps():
+    print "Loading default maps..."
+    with open("content/maps.json", "r") as f:
+        data = json.load(f)
+    for item in data:
+        m = Map()
+        m.title = item['title']
+        m.name = item['name']
+        m.image = item['image']
+        m.mtype = item['mtype']
+        m.save()
+        print "  Loaded map %s, %s" % (m.title, m.id)
+
 if __name__ == "__main__":
-    for table in [User, Server, Ban, BanLog, Lobby, Invite, Friendship]:
+    for table in [User, Server, Ban, BanLog, Lobby, Invite, Friendship, Map]:
         table.drop_table(True, cascade=True)
         table.create_table(True)
+
+    load_default_maps()
 
     u = User()
     u.username = "test"

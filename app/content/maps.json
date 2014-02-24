@@ -1,0 +1,99 @@
+[
+    {
+        "title": "Office",
+        "name": "cs_office",
+        "image": "http://static1.wikia.nocookie.net/__cb20130608143924/cs/images/9/93/Csgo_office_big.jpg",
+        "mtype": 2
+    },
+
+    {
+        "title": "Dust 2",
+        "name": "de_dust2",
+        "image": "http://img1.wikia.nocookie.net/__cb20130420155935/cs_/images/9/99/Csgo_dust2_big.jpg",
+        "mtype": 1
+    },
+
+    {
+        "title": "Aztec",
+        "name": "de_aztec",
+        "image": "http://static4.wikia.nocookie.net/__cb20130420145729/cs/images/9/94/Csgo_aztec_big.jpg",
+        "mtype": 1
+    },
+
+    {
+        "title": "Dust",
+        "name": "de_dust",
+        "image": "http://img1.wikia.nocookie.net/__cb20130420155723/cs_/images/1/17/Csgo_dust_big.jpg",
+        "mtype": 1
+    },
+
+    {
+        "title": "Cobblestone",
+        "name": "de_cbble",
+        "image": "http://i1.ytimg.com/vi/TxIFspGUlaQ/maxresdefault.jpg",
+        "mtype": 1
+    },
+
+    {
+        "title": "Inferno",
+        "name": "de_inferno",
+        "image": "http://static3.wikia.nocookie.net/__cb20130420160240/cs/images/6/63/Csgo_inferno_big.jpg",
+        "mtype": 1
+    },
+
+    {
+        "title": "Mirage",
+        "name": "de_mirage",
+        "image": "http://img1.wikia.nocookie.net/__cb20131014234945/cs_/images/c/c7/Csgo_mirage_big.jpg",
+        "mtype": 1
+    },
+
+    {
+        "title": "Nuke",
+        "name": "de_nuke",
+        "image": "http://static.esportsea.com/global/images/content_images/9736.jpg",
+        "mtype": 1
+    },
+
+    {
+        "title": "Overpass",
+        "name": "de_overpass",
+        "image": "http://img3.wikia.nocookie.net/__cb20140121031223/cs_/images/4/41/Csgo_overpass_big.jpg",
+        "mtype": 1
+    },
+
+    {
+        "title": "Train",
+        "name": "de_train",
+        "image": "http://img2.wikia.nocookie.net/__cb20130420160815/cs_/images/5/5b/Csgo_train_big.jpg",
+        "mtype": 1
+    },
+
+    {
+        "title": "Vertigo",
+        "name": "de_vertigo",
+        "image": "http://files.gamebanana.com/bitpit/de_vertigo_1.jpg",
+        "mtype": 1
+    },
+
+    {
+        "title": "Assault",
+        "name": "cs_assault",
+        "image": "http://img2.wikia.nocookie.net/__cb20130608141138/cs_/images/b/bc/Csgo_assault_big.jpg",
+        "mtype": 2
+    },
+
+    {
+        "title": "Italy",
+        "name": "cs_italy",
+        "image": "http://static2.wikia.nocookie.net/__cb20130608142051/cs/images/7/7b/Csgo_italy_big.jpg",
+        "mtype": 2
+    },
+
+    {
+        "title": "Militia",
+        "name": "cs_militia",
+        "image": "http://img2.wikia.nocookie.net/__cb20130608143315/cs_/images/d/db/Csgo_militia_big.jpg",
+        "mtype": 2
+    }
+]

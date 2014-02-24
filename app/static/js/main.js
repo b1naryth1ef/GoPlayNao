@@ -21,7 +21,8 @@ var JST = {
     lobbyMember: _.template('<tr id="member-<%= m.id %>"><td><%= m.username %></td>'+
         '<% if (leader) { %><td><a href="" class="label label-danger lobby-kick">kick</a></td><% } %></tr>'),
 
-    lobbyMap: _.template('<option style="height: 100px; width: 100px;" data-img-src="<%- images[0] %>/300x200.resizedimage" value="<%= name %>"><%= title %></option>')
+    lobbyMap: _.template('<option style="height: 100px; width: 100px;" data-img-src="/api/maps/image?map=<%- id %>&height=200&width=300"'+
+        ' value="<%= name %>"><%= title %></option>')
 
 }
 

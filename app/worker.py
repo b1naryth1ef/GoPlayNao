@@ -78,26 +78,29 @@ def task_load_workshop_maps():
 
     for item in q.files:
         map_name = item.title
-        # I don't always yolo...
         if not item.title.startswith("de_"):
-           map_name = "de_" + item.title.lower()
+            map_name = "de_" + item.title.lower()
 
-        for i in redis.zrange("maps", 0, -1):
-            d = json.loads(i)
-            if d['name'] == map_name:
-                redis.zrem("maps", i)
+        q = Map.select().where(Map.name == map_name)
+        if q.count():
+            q = q[0]
+        else:
+            q = Map()
+            q.name = map_name
+            if "hostage" in item.tags:
+                q.mtype = MapType.MAP_TYPE_HOSTAGE
+            else:
+                q.mtype = MapType.MAP_TYPE_BOMB
+            q.custom = True
 
-        print "Adding map `%s` to maps list!" % map_name
-        data = {
-            "title": item.title,
-            "name": map_name,
-            "wid": item.id,
-            "images": item.images,
-            "thumb": item.thumb
-        }
+        q.title = item.title
+        q.image = item.thumb or item.images[0]
+        q.save()
 
-        redis.zadd("maps", json.dumps(data), 0)
-
+    redis.delete("maps")
+    for mp in Map.select():
+        print "Adding map %s to maps cache!" % mp.title
+        redis.zadd("maps", json.dumps(mp.format()), mp.level)
 
 @schedule(seconds=30)
 def task_stats_cache():

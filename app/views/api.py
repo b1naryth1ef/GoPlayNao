@@ -1,8 +1,11 @@
-from flask import Blueprint, render_template, flash, redirect, request, g, session, jsonify, Response
+from flask import (Blueprint, render_template, flash, redirect, request,
+                        g, session, jsonify, Response, send_file)
 from flask.ext.socketio import emit
 from database import *
 from util import *
-import time, json
+from PIL import Image
+from StringIO import StringIO
+import time, json, requests
 
 api = Blueprint('api', __name__, url_prefix='/api')
 
@@ -32,7 +35,7 @@ def api_info():
     return jsonify(data)
 
 @api.route("/maps")
-@limit(20)
+@limit(60)
 def api_maps():
     level = 0
     if g.user:
@@ -44,7 +47,41 @@ def api_maps():
         response=data,
         status=200,
         mimetype="application/json")
-    
+
+
+VALID_SIZE_HEIGHT = [200, 360, 480, 600, 720, 1080]
+VALID_SIZE_WIDTH = [300, 640, 800, 1280, 1920]
+
+@api.route("/maps/image")
+@limit(300)
+def api_maps_image():
+    args, success = require(map=int, width=int, height=int)
+
+    valid = (args.width in VALID_SIZE_WIDTH and args.height in VALID_SIZE_HEIGHT)
+    if not success or not valid:
+        return "", 400
+
+    try:
+        m = Map.select().where(Map.id == args.map).get()
+    except Map.DoesNotExist:
+        return "", 404
+
+    key = "map:image:%s:%sx%s" % (args.map, args.width, args.height)
+    if redis.exists(key):
+        buffered = StringIO(redis.get(key))
+        buffered.seek(0)
+    else:
+        r = requests.get(m.image)
+        r.raise_for_status()
+
+        buffered = StringIO()
+        img = Image.open(StringIO(r.content))
+        img = img.resize((args.width, args.height), Image.ANTIALIAS)
+        img.save(buffered, 'JPEG', quality=90)
+        buffered.seek(0)
+        redis.setex(key, buffered.getvalue(), (60 * 60 * 24))
+
+    return send_file(buffered, mimetype='image/jpeg')
 
 @api.route("/bans/list")
 @limit(120)
