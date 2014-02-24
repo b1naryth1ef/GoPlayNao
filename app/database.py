@@ -223,6 +223,7 @@ class Lobby(BaseModel):
     private = BooleanField(default=True)
     state = IntegerField(default=LobbyState.LOBBY_STATE_CREATE)
     created = DateTimeField(default=datetime.utcnow)
+    queuedat = DateTimeField(default=datetime.utcnow)
     config = JSONField()
 
     @classmethod
@@ -293,6 +294,7 @@ class Lobby(BaseModel):
     def startQueue(self):
         if self.state == LobbyState.LOBBY_STATE_SEARCH: return
         self.state = LobbyState.LOBBY_STATE_SEARCH
+        self.queuedat = datetime.utcnow()
         self.save()
         self.sendAction({
             "type": "state",

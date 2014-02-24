@@ -185,6 +185,23 @@ class MatchFinder(object):
             for comb in itertools.combinations(obj, index):
                 yield comb
 
+    def get_teams(self, lobbies, max_skill):
+        for comb in self.all_comb(lobbies):
+            teama, teamb = [], []
+            for entry in comb:
+                if len(teama) < 5:
+                    teama.append(entry)
+                else:
+                    teamb.append(entry)
+
+            skilla = sum(map(teama, lambda z: z.getSkillDifference()))
+            skillb = sum(map(teamb, lambda z: z.getSkillDifference()))
+
+            if abs(skilla - skillb) >= max_skill:
+                return teama, teamb
+
+        return None, None
+
     def find_match(self, l):
         MAX_SKILL_DIFF = 5
 
@@ -216,8 +233,8 @@ class MatchFinder(object):
             print "No possible matches found for %s" % l.id
             return None, None
 
-        # Sort the list by created date, ending with older first
-        possible_matches.sort(key=lambda i: i.created)
+        # Sort the list by queued time, results in older first
+        possible_matches.sort(key=lambda i: i.queuedat)
         for match in possible_matches:
             # We'll have a hodge podge of maps in this result, limit matches
             #  that do not actually share maps together
@@ -225,11 +242,11 @@ class MatchFinder(object):
             if not maps:
                 continue
 
-            # Get the total skill difference
-            # if map(lambda a, b: a.getSkillDifference(b), match) <= MAX_SKILL_DIFF:
-            #     return match, maps
+            a_team, b_team = self.get_teams(match, MAX_SKILL_DIFF)
+            if not a_team or not b_team:
+                continue
 
-            return match, maps
+            return maps, (a_team, b_team)
 
         print "No matches found for %s" % l.id
         return None, None
@@ -246,8 +263,8 @@ class MatchFinder(object):
 
                 if lobby.state != LobbyState.LOBBY_STATE_SEARCH: continue
 
-                match, maps = self.find_match(lobby)
-                if not match:
+                maps, teams = self.find_match(lobby)
+                if not maps:
                     continue
 
 FINDER = MatchFinder()
