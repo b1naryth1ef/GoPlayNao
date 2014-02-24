@@ -41,15 +41,16 @@ var pug = {
     bg: false,
     socket: null,
 
+    // -- HTML5 Wrappers --
     storeLocal: function(k, v) {
-        if (!supports_html5_storage()) {
+        if (!Modernizr.localstorage) {
             return false;
         }
         localStorage.setItem(k, v);
     },
 
     getLocal: function (k) {
-        if (!supports_html5_storage()) {
+        if (!Modernizr.localstorage) {
             return null;
         }
         return localStorage.getItem(k)
@@ -61,6 +62,19 @@ var pug = {
         }
     },
 
+    notify: function(msg) {
+        if (!window.webkitNotifications) { return; }
+        if (window.webkitNotifications.checkPermission() == 0) {
+            window.webkitNotifications.createNotification('icon.png', msg.title, msg.content);
+        }
+    },
+
+    // TODO: use this in a click event
+    notifyRequestPerms: function () {
+        window.webkitNotifications.requestPermission()
+    },
+
+    // -- General Shit --
     msg: function(content, type, location, dismiss, cls) {
         var cls = cls ? cls : "";
         var dismiss = dismiss ? '<i class="icon-remove close" data-dismiss="alert"></i> ' : '';
@@ -515,30 +529,13 @@ var pug = {
     },
 }
 
-// var backgroundTimeout = null;
-// $(window).focus(function() {
-//     // Woah wait up guys I'm back!
-//     clearTimeout(backgroundTimeout);
-//     pug.bg = false;
-//             pug.lobbyPollStart();
-//         pug.runGetStats();
-// });
-
-// $(window).blur(function() {
-//     // If the client window is idle for more than 15 minutes, all the refresh timers get set long
-//     //  to prevent major spamming of the backend
-//     backgroundTimeout = setTimeout(function () {
-//         pug.bg = true;
-//         pug.lobbyPollStart();
-//         pug.runGetStats();
-//     }, 60000 * 15)
-// });
-
 $(document).ready(function () {
+    // We immediatly load stats to display on the page, websocket will keep
+    //  this going
     pug.getStats();
 
     // Warn users that do not have good support for our features
-    if (!supports_html5_storage() || !history) {
+    if (!Modernizr.websockets || !Modernizr.localstorage || !Modernizr.history || !window.webkitNotifications) {
         $(".bad-browser-alert").fadeIn();
     }
 });
