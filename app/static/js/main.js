@@ -23,7 +23,13 @@ var JST = {
 
     lobbyMap: _.template('<option <%= selected ? "selected" : ""%> style="height: 100px; width: 100px;"'+
         ' data-img-src="/api/maps/image?map=<%- id %>&height=200&width=300"'+
-        ' value="<%= name %>"><%= title %></option>')
+        ' value="<%= name %>"><%= title %></option>'),
+
+    search_base: _.template('<li class="search-result"><a href="/u/<%= u.username %>"><div class="col-left">'+
+                        '<span class="label label-info"><i class="icon-star"></i></span>'+
+                        '</div><div class="col-right with-margin">'+
+                        '<span class="message"><strong><%= u.username %></strong></span>'+
+                        '<span class="time">32 Pugs Played</span></div></a> </li>')
 
 }
 
@@ -87,11 +93,6 @@ var pug = {
     },
 
     vglobal: function() {
-        var search_base = _.template('<li class="search-result"><a href="/user/<%= u.username %>"><div class="col-left">'+
-                        '<span class="label label-info"><i class="icon-star"></i></span>'+
-                        '</div><div class="col-right with-margin">'+
-                        '<span class="message"><strong><%= u.username %></strong></span>'+
-                        '<span class="time">32 Pugs Played</span></div></a> </li>')
         var search = function() {
             $(".search-result").remove()
             $.ajax("/api/users/search", {
@@ -103,7 +104,7 @@ var pug = {
                     $(".sidebar-search-results").slideDown(200);
                     if (data.success) {
                         for (eid in data.results) {
-                            $("#search-results").append(search_base({u: data.results[eid]}))
+                            $("#search-results").append(JST.search_base({u: data.results[eid]}))
                         }
                     }
                 }
@@ -499,6 +500,7 @@ var pug = {
         });
 
         $(".friends-accept").click(function (e) {
+            // TODO: refresh friends list (??)
             var dis = $(this);
             $.ajax("/api/invites/accept", {
                 type: "POST",

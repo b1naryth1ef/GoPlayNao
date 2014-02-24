@@ -220,7 +220,6 @@ class LobbyState(object):
 
 class Lobby(BaseModel):
     owner = ForeignKeyField(User)
-    # members = ArrayField(IntegerField)
     private = BooleanField(default=True)
     state = IntegerField(default=LobbyState.LOBBY_STATE_CREATE)
     created = DateTimeField(default=datetime.utcnow)
@@ -232,14 +231,15 @@ class Lobby(BaseModel):
         self.owner = user
         self.invited = []
 
+        maps = [Map.select().where(Map.name == i).get().id for i in maps]
+
         # Default Config
         self.config = {
-            "maps": [],
+            "maps": maps or [i.id for i in Map.select().where(Map.level == self.owner.level)],
             "type": "ranked",
             "region": 0,
             "ringer": False
         }
-        self.config['maps'] = maps
         self.save()
         self.joinLobby(user)
         return self
@@ -320,6 +320,12 @@ class Lobby(BaseModel):
             "msg": "%s joined the lobby" % u.username
         })
         redis.sadd("lobby:%s:members" % self.id, u.id)
+
+    def getSkillDifference(self, other):
+        """
+        TODO: get a avg skill diff for two lobbies
+        """
+        return 0
 
 
 class InviteType(object):

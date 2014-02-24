@@ -3,9 +3,9 @@ from steam import getSteamAPI
 from database import *
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
+import itertools
 
 schedules = {}
-tasks = {}
 
 s = getSteamAPI()
 
@@ -13,15 +13,6 @@ def schedule(**kwargs):
     def deco(f):
         schedules[f.__name__] = (datetime.utcnow(), relativedelta(**kwargs), f)
         return f
-    return deco
-
-def repeat(delay):
-    def deco(f):
-        def _f():
-            while True:
-                time.sleep(delay)
-                f()
-        return _f
     return deco
 
 LOBBY_TIMEOUT = 15
@@ -126,62 +117,140 @@ class MatchFinder(object):
     def run(self):
         pass
 
-    def limit_maps(self, configs):
+    # def limit_maps(self, configs):
+    #     """
+    #     Takes a list of lobby configs, and returns a dictionary of map names
+    #     to rankings. This filters out all maps that are not acceptable
+    #     """
+    #     maps, maps_lim = {}, {}
+
+    #     map_configs = map(lambda i: i["maps"], configs)
+    #     for mapli in map_configs:
+    #         for m, r in mapli.items():
+    #             if m in maps:
+    #                 maps[m] += r
+    #             else:
+    #                 maps[m] = r
+
+    #     acceptable_maps = filter(lambda a: a[1][0] == len(map_configs), maps.items())
+    #     return dict(map(lambda a: (a[0], a[1][1]), acceptable_maps))
+
+    #     return dict()
+
+    # def choose_map(self, maps):
+    #     """
+    #     This function takes in a list of lobby configurations and returns
+    #     a single map that is the best choice based on these. This works on
+    #     a simple additivie-ranking method which takes the highest ranked match,
+    #     or a random choice of the highest ranked matches.
+    #     """
+    #     maps = {}
+
+    #     for cfg in configs:
+    #         for mp in cfg.get("maps", []):
+    #             name, rank = mp['name'], mp['rank']
+    #             if name not in maps:
+    #                 maps[name] = rank
+    #                 continue
+    #             maps[name] += rank
+
+    #     results = sorted(maps.items(), key=lambda a: -a[1])
+
+    #     # Check if we have multiple matches
+    #     if results[0][1] != results[1][1]:
+    #         return results[0][0]
+
+    #     # We have a few canidates, choose a random one
+    #     pool = []
+    #     for result in results:
+    #         if result[1] == results[0][1]:
+    #             pool.append(result[0])
+    #     return random.choice(pool)
+
+    def get_shared(self, *args):
         """
-        Takes a list of lobby configs, and returns a dictionary of map names
-        to rankings. This filters out all maps that are not acceptable
+        Returns a set of shared items between a infinite (?) amount of lists.
+
+        TOOD: maybe this could suck less?
         """
-        maps, maps_lim = {}, {}
+        maps = set(args[0])
+        for mmap in maps:
+            for arg in args:
+                if mmap not in arg:
+                    maps.remove(mmap)
+        return maps
 
-        map_configs = map(lambda i: i["maps"], configs)
-        for mapli in map_configs:
-            for m, r in mapli.items():
-                if m in maps:
-                    maps[m] += r
-                else:
-                    maps[m] = r
+    def all_comb(self, obj):
+        for index in xrange(0, len(obj)):
+            for comb in itertools.combinations(obj, index):
+                yield comb
 
-        acceptable_maps = filter(lambda a: a[1][0] == len(map_configs), maps.items())
-        return dict(map(lambda a: (a[0], a[1][1]), acceptable_maps))
+    def find_match(self, l):
+        MAX_SKILL_DIFF = 5
 
-        return dict()
+        valid_lobbies = []
+        possible_matches = []
 
-    def choose_map(self, maps):
-        """
-        This function takes in a list of lobby configurations and returns
-        a single map that is the best choice based on these. This works on
-        a simple additivie-ranking method which takes the highest ranked match,
-        or a random choice of the highest ranked matches.
-        """
-        maps = {}
+        # Get a set of possible lobbies based on map and region selection
+        for item in Lobby.select().where((Lobby.state == LobbyState.LOBBY_STATE_SEARCH)).order_by(Lobby.created):
+            if not self.get_shared(l.config['maps'], item.config['maps']):
+                print "Could not find shared maps between %s and %s" % (l.id, item.id)
+                break
+            if l.region != item.region:
+                print "Region does not match between %s and %s" % (l.id, item.id)
+                break
+            valid_lobbies.append(item)
 
-        for cfg in configs:
-            for mp in cfg.get("maps", []):
-                name, rank = mp['name'], mp['rank']
-                if name not in maps:
-                    maps[name] = rank
+        if not len(valid_lobbies):
+            print "No valid lobbies found for %s" % l.id
+            return None, None
+
+        # Generate ALL possible 5v5 matches
+        for comb in self.all_comb(valid_lobbies):
+            # Matches have 10 players y0 dawg
+            if reduce(lambda i: len(i.getMembers()), comb) == 10:
+                possible_matches.append(comb)
+
+        # If we don't have any break out
+        if not len(possible_matches):
+            print "No possible matches found for %s" % l.id
+            return None, None
+
+        # Sort the list by created date, ending with older first
+        possible_matches.sort(key=lambda i: i.created)
+        for match in possible_matches:
+            # We'll have a hodge podge of maps in this result, limit matches
+            #  that do not actually share maps together
+            maps = self.get_shared(match)
+            if not maps:
+                continue
+
+            # Get the total skill difference
+            # if map(lambda a, b: a.getSkillDifference(b), match) <= MAX_SKILL_DIFF:
+            #     return match, maps
+
+            return match, maps
+
+        print "No matches found for %s" % l.id
+        return None, None
+
+    def loop(self):
+        ps = redis.pubsub()
+        ps.subscribe("lobby-queue")
+
+        for item in ps.listen():
+            if item['type'] == "message":
+                try:
+                    lobby = Lobby.select().where(Lobby.id == item['data']).get()
+                except Lobby.DoesNotExist: continue
+
+                if lobby.state != LobbyState.LOBBY_STATE_SEARCH: continue
+
+                match, maps = self.find_match(lobby)
+                if not match:
                     continue
-                maps[name] += rank
-
-        results = sorted(maps.items(), key=lambda a: -a[1])
-
-        # Check if we have multiple matches
-        if results[0][1] != results[1][1]:
-            return results[0][0]
-
-        # We have a few canidates, choose a random one
-        pool = []
-        for result in results:
-            if result[1] == results[0][1]:
-                pool.append(result[0])
-        return random.choice(pool)
-
 
 FINDER = MatchFinder()
-
-@repeat(5)
-def task_find_matches():
-    FINDER.run()
 
 def schedule(**kwargs):
     def deco(f):
@@ -190,7 +259,7 @@ def schedule(**kwargs):
     return deco
 
 def run():
-    thread.start_new_thread(task_find_matches, ())
+    thread.start_new_thread(FINDER.loop, ())
     while True:
         time.sleep(1)
         for name, timeframe in schedules.items():
