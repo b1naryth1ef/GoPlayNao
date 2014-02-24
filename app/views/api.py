@@ -49,15 +49,20 @@ def api_maps():
         mimetype="application/json")
 
 
-VALID_SIZE_HEIGHT = [200, 360, 480, 600, 720, 1080]
-VALID_SIZE_WIDTH = [300, 640, 800, 1280, 1920]
+# Valid width and height combinations
+VALID_SIZES = [(300, 200), (640, 360), (640, 480), (800, 600), (1280, 720), (1920, 1080)]
 
 @api.route("/maps/image")
 @limit(300)
 def api_maps_image():
+    """
+    This endpoints returns a stock map image resized to limited user
+    specification. The endpoint caches resized images, and thus is slow
+    only on the first call for a size.
+    """
     args, success = require(map=int, width=int, height=int)
 
-    valid = (args.width in VALID_SIZE_WIDTH and args.height in VALID_SIZE_HEIGHT)
+    valid = (args.width, args.height) in VALID_SIZES
     if not success or not valid:
         return "", 400
 
@@ -79,7 +84,8 @@ def api_maps_image():
         img = img.resize((args.width, args.height), Image.ANTIALIAS)
         img.save(buffered, 'JPEG', quality=90)
         buffered.seek(0)
-        redis.setex(key, buffered.getvalue(), (60 * 60 * 24))
+        # Images are cached for 6 hours
+        redis.setex(key, buffered.getvalue(), (60 * 60 * 6))
 
     return send_file(buffered, mimetype='image/jpeg')
 

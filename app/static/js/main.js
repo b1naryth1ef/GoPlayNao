@@ -19,9 +19,10 @@ var JST = {
         '<td><a href="" id="<%= f.id %>" class="label label-primary lobby-invite">Invite</a></td></tr>'),
 
     lobbyMember: _.template('<tr id="member-<%= m.id %>"><td><%= m.username %></td>'+
-        '<% if (leader) { %><td><a href="" class="label label-danger lobby-kick">kick</a></td><% } %></tr>'),
+        '<% if (leader && m.id != us) { %><td><a href="" class="label label-danger lobby-kick">kick</a></td><% } %></tr>'),
 
-    lobbyMap: _.template('<option style="height: 100px; width: 100px;" data-img-src="/api/maps/image?map=<%- id %>&height=200&width=300"'+
+    lobbyMap: _.template('<option <%= selected ? "selected" : ""%> style="height: 100px; width: 100px;"'+
+        ' data-img-src="/api/maps/image?map=<%- id %>&height=200&width=300"'+
         ' value="<%= name %>"><%= title %></option>')
 
 }
@@ -39,6 +40,20 @@ var pug = {
     getStatsInterval: null,
     bg: false,
     socket: null,
+
+    storeLocal: function(k, v) {
+        if (!supports_html5_storage()) {
+            return false;
+        }
+        localStorage.setItem(k, v);
+    },
+
+    getLocal: function (k) {
+        if (!supports_html5_storage()) {
+            return null;
+        }
+        return localStorage.getItem(k)
+    },
 
     pushurl: function(url) {
         if (history) {
@@ -144,13 +159,28 @@ var pug = {
             $("#lobby").hide();
             $.ajax("/api/maps", {
                 success: function (data) {
+                    base = pug.getLocal("maps");
                     _.each(data, function (v) {
+                        // If we have some local stored data, set map selection
+                        //  based on that. Otherwise just set every map as selected
+                        if (base) {
+                            // If we exist, we're selected otherwise gtfo
+                            if (base.indexOf(v.name) > -1) {
+                                v.selected = true;
+                            } else {
+                                v.selected = false;
+                            }
+                        } else {
+                            v.selected = true;
+                        }
                         $("#lobby-map-list").append(JST.lobbyMap(v))
                     })
+
                     $("#lobby-map-list").imagepicker({
                         show_label: true,
                         changed: function (oldv, newv) {
                             pug.config.maps = newv;
+                            pug.storeLocal("maps", newv)
                         }
                     })
                 }
@@ -256,7 +286,7 @@ var pug = {
     },
     lobbyAddMember: function(m) {
         var isLeader = (USER.id == pug.lobbydata.owner)
-        $("#lobby-member-list").append(JST.lobbyMember({m: m, leader: isLeader}));
+        $("#lobby-member-list").append(JST.lobbyMember({m: m, leader: isLeader, us: USER.id}));
     },
 
     lobbyRmvMember: function(id) {
@@ -266,7 +296,6 @@ var pug = {
     lobbyRenderFriends: function() {
         $.ajax("/api/users/friends", {
             success: function (data) {
-                console.log(data)
                 if (data.success) {
                     $.each(data.friends.online, function(_, v) {
                         $("#lobby-friends-list").append(JST.lobbyFriend({f: v}))
@@ -507,4 +536,9 @@ var pug = {
 
 $(document).ready(function () {
     pug.getStats();
+
+    // Warn users that do not have good support for our features
+    if (!supports_html5_storage() || !history) {
+        $(".bad-browser-alert").fadeIn();
+    }
 });

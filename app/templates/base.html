@@ -78,7 +78,7 @@
             </ul>
             <a class="navbar-brand" href="index.html">
                 <!-- <img src="/static/img/logo.png" alt="logo"/> -->
-                <strong>NS2</strong>PUG
+                <strong>GoPlayMM</strong>
             </a>
             <ul class="nav navbar-nav navbar-right">
                 {% if g.user %}
@@ -159,6 +159,9 @@
             </div>
         </div>
         <div id="content">
+    <div class="alert alert-danger bad-browser-alert" style="display: none;">
+        <b>Woah There!</b> Looks like your using a browser that might not have great support for this website. Please consider <a href="http://www.browser-update.org/update.html">upgrading</a> your browser!
+    </div>
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}

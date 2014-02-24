@@ -1,34 +1,3 @@
-// (function () {
-
-// var original = document.title;
-// var timeout;
-
-// window.flashTitle = function (newMsg, howManyTimes) {
-//     original = document.title;
-//     function step() {
-//         document.title = (document.title == original) ? newMsg : original;
-
-//         if (--howManyTimes > 0) {
-//             timeout = setTimeout(step, 1000);
-//         };
-//     };
-
-//     howManyTimes = parseInt(howManyTimes);
-
-//     if (isNaN(howManyTimes)) {
-//         howManyTimes = 5;
-//     };
-
-//     cancelFlashTitle(timeout);
-//     step();
-// };
-
-// window.cancelFlashTitle = function () {
-//     clearTimeout(timeout);
-//     document.title = original;
-// };
-
-// }());
 
 function flashTitle(text) {
     var timer,
@@ -47,3 +16,10 @@ function flashTitle(text) {
     })
 }
 
+function supports_html5_storage() {
+    try {
+        return 'localStorage' in window && window['localStorage'] !== null;
+    } catch (e) {
+        return false;
+    }
+}
