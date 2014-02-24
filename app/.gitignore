@@ -2,3 +2,6 @@
 *#
 *~
 *.db
+config.py
+*.log
+*.smx
