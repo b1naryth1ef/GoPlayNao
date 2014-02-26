@@ -39,16 +39,6 @@ def authed(level=0, err=None):
         return _f
     return deco
 
-def server():
-    def deco(f):
-        @wraps(f)
-        def _f(*args, **kwargs):
-            if not g.server:
-                return jsonify({"success": False, "error": 3, "msg": "Invalid Server Session!"})
-            return f(*args, **kwargs)
-        return _f
-    return deco
-
 def limit(per_minute):
     """
     Enables ratelimiting for an endpoint, is ALWAYS ignored for server
@@ -57,17 +47,16 @@ def limit(per_minute):
     def deco(f):
         @wraps(f)
         def _f(*args, **kwargs):
-            if not g.server:
-                # TODO: this could be used as a DoS attack by filling up
-                #  redis. Maybe add global rate limiting?
-                k = "rl:%s_%s" % (f.__name__, request.remote_addr)
-                if not redis.exists(k) or not redis.ttl(k):
-                    redis.delete(k)
-                    redis.setex(k, 1, 60)
-                    return f(*args, **kwargs)
-                if int(redis.get(k)) > per_minute:
-                    return "Too many requests per minute!", 429
-                redis.incr(k)
+            # TODO: this could be used as a DoS attack by filling up
+            #  redis. Maybe add global rate limiting?
+            k = "rl:%s_%s" % (f.__name__, request.remote_addr)
+            if not redis.exists(k) or not redis.ttl(k):
+                redis.delete(k)
+                redis.setex(k, 1, 60)
+                return f(*args, **kwargs)
+            if int(redis.get(k)) > per_minute:
+                return "Too many requests per minute!", 429
+            redis.incr(k)
             return f(*args, **kwargs)
         return _f
     return deco

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container" style="fixed-header">
+    <div class="page-header">
+        <div class="page-title">
+            <h3>Bans</h3> 
+        </div>
+    </div>
+    <div class="row" id="friends-main">
+        <div class="col-md-12">
+            <div class="widget box">
+                <div class="widget-header">
+                    <h4>Last 50 Bans</h4>
+                </div>
+                <div class="widget-content">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Username</th>
+                                <th>Reason</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bans-list"></tbody> 
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function () {
+    pug.bans();
+});
+</script>
+{% endblock %}

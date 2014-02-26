@@ -108,7 +108,6 @@ def api_bans_list():
 
     This endpoint is limited to 120 requests per minute.
     """
-
     args, _ = require(page=int, after=int)
     data = {
         "success": True,
@@ -117,9 +116,9 @@ def api_bans_list():
     }
 
     if args.after:
-        q = Ban.select().where(Ban.id > args.after).order_by(Ban.id).limit(100)
+        q = Ban.select().where(Ban.id > args.after).order_by(Ban.id).limit(25)
     elif args.page:
-        q = Ban.select().order_by(Ban.id).paginate(args.page or 1, 100)
+        q = Ban.select().order_by(Ban.id).paginate(args.page or 1, 25)
     else:
         data['success'] = False
         data['msg'] = "Need either page or after for /bans/list"
@@ -131,7 +130,7 @@ def api_bans_list():
     return jsonify(data)
 
 @api.route("/bans/get")
-@limit(60)
+@limit(120)
 def api_bans_get():
     """
     Returns the first active ban for a steamid, banid, or userid. It's
@@ -155,7 +154,7 @@ def api_bans_get():
         source: the banner (if any)
         duration: human readable duration
 
-    This endpoint is limited to 60 requests per minute.
+    This endpoint is limited to 120 requests per minute.
     """
     args, _ = require(steamid=int, banid=int, userid=int)
 
@@ -181,36 +180,35 @@ def api_bans_get():
     data['success'] = True
     return jsonify(data)
 
-@api.route("/bans/ping")
-@server()
-def api_bans_ping():
-    """
-    Called by a server to notify the backend a banned client tried connecting.
-    This should really never happen, becuase the backend will not allow
-    banned players to join a lobby, but we want to track these events for
-    abuse in the system regardless.
+# @api.route("/bans/ping")
+# def api_bans_ping():
+#     """
+#     Called by a server to notify the backend a banned client tried connecting.
+#     This should really never happen, becuase the backend will not allow
+#     banned players to join a lobby, but we want to track these events for
+#     abuse in the system regardless.
 
-    Arguments:
-        banid: the ban id
+#     Arguments:
+#         banid: the ban id
 
-    Returned:
-        ref: the added banlog for debug
-    """
-    args, success = require(banid=int)
+#     Returned:
+#         ref: the added banlog for debug
+#     """
+#     args, success = require(banid=int)
 
-    if not success:
-        return jsonify({
-            "success": False,
-            "msg": "You must specify a banid for /bans/ping"
-        })
+#     if not success:
+#         return jsonify({
+#             "success": False,
+#             "msg": "You must specify a banid for /bans/ping"
+#         })
 
-    try:
-        ban = Ban.select().where(Ban.id == args.banid).get()
-    except Ban.DoesNotExist:
-        return jsonify({"success": False, "msg": "Inavlid banid!"})
+#     try:
+#         ban = Ban.select().where(Ban.id == args.banid).get()
+#     except Ban.DoesNotExist:
+#         return jsonify({"success": False, "msg": "Inavlid banid!"})
 
-    id = ban.log(action=BanLogType.BAN_LOG_ATTEMPT, server=g.server.id)
-    return jsonify({"success": True, "ref": id})
+#     id = ban.log(action=BanLogType.BAN_LOG_ATTEMPT, server=g.server.id)
+#     return jsonify({"success": True, "ref": id})
 
 @api.route("/servers/register")
 @limit(30)

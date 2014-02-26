@@ -29,7 +29,11 @@ var JST = {
                         '<span class="label label-info"><i class="icon-star"></i></span>'+
                         '</div><div class="col-right with-margin">'+
                         '<span class="message"><strong><%= u.username %></strong></span>'+
-                        '<span class="time">32 Pugs Played</span></div></a> </li>')
+                        '<span class="time">32 Pugs Played</span></div></a> </li>'),
+
+    ban_row: _.template('<tr><td><%= ban.id %></td>'+
+        '<td><a href="<%= url %>"><%= ban.user.username %></a></td>'+
+        '<td><%= ban.reason %></td><td><%= ban.duration %></td></tr>')
 
 }
 
@@ -46,6 +50,9 @@ var pug = {
     getStatsInterval: null,
     bg: false,
     socket: null,
+
+    // View: bans
+    bans_page_num: 1,
 
     // -- HTML5 Wrappers --
     storeLocal: function(k, v) {
@@ -500,7 +507,6 @@ var pug = {
         });
 
         $(".friends-accept").click(function (e) {
-            // TODO: refresh friends list (??)
             var dis = $(this);
             $.ajax("/api/invites/accept", {
                 type: "POST",
@@ -511,12 +517,33 @@ var pug = {
                     if (data.success) {
                         dis.parents()[1].remove()
                         pug.msg("Accepted Friend Invite!", "success", "#friends-main", true)
+                        setTimeout(location.refresh, 3000);
                     }
                 }
             })
         });
     },
 
+    // Bans view
+    bans: function() {
+        $.ajax("/api/bans/list", {
+            data: {
+                page: this.bans_page_num
+            },
+            success: function(data) {
+                _.each(data.bans, function (ban) {
+                    if (ban.steamid) {
+                        url = "steamcommunity.com/profiles/"+ban.steamid
+                    } else {
+                        url = "/u/"+ban.user.id
+                    }
+                    $(".bans-list").html(JST.ban_row({ban: ban, url:url}))
+                })
+            }
+        })
+    },
+
+    // Profile view
     profile: function(u) {
         $.ajax("/api/users/stats", {
             data: {

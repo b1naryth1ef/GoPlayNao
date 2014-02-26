@@ -30,7 +30,7 @@ class User(BaseModel):
     join_date = DateTimeField(default=datetime.utcnow)
     last_login = DateTimeField(default=datetime.utcnow)
 
-    ips = ArrayField(default=[])
+    ips = ArrayField(CharField, default=[])
 
     # Permissions
     level = IntegerField(default=0)
@@ -142,14 +142,14 @@ class Ban(BaseModel):
     def format(self):
         return {
             "id": self.id,
-            "userid": self.user.id,
+            "user": self.user.format(),
             "steamid": self.steamid,
             "created": int(self.start.strftime("%s")),
-            "start": int(self.start.strftime("%s")),
-            "end": int(self.end.strftime("%s")),
+            "start": int(self.start.strftime("%s")) if self.start else "",
+            "end": int(self.end.strftime("%s")) if self.end else "",
             "reason": self.reason,
             "source": self.source,
-            "duration": human_readable(self.end-self.start) if self.end and self.start else ""
+            "duration": human_readable(self.end-self.start) if self.end and self.start else "forever"
         }
 
     def log(self, action=None, user=None, server=None):
@@ -514,6 +514,13 @@ if __name__ == "__main__":
     u1.username = "Yolo Swaggings"
     u1.steamid = 1333337
     u1.save()
-
     u1.friendRequest(u)
+
+    b = Ban()
+    b.user = u1
+    b.reason = "Yolo'ing too hard!"
+    b.active = True
+    b.source = "MMAC"
+    b.save()
+
     print "Test User: %s" % u.id
