@@ -4,8 +4,12 @@
 <div class="container" style="fixed-header">
     <div class="page-header">
         <div class="page-title">
-            <h3>Dashboard</h3> 
-            <span>Welcome to GoPlayMM!</span>
+            {% if g.user %}
+                <h3>Dashboard</h3> 
+            {% else %}
+                <h3>GoPlayMM</h3>
+                <span>Because games should be fun</span>
+            {% endif %}
         </div>
         <ul class="page-stats">
             <li>
@@ -14,37 +18,45 @@
                 </div> 
                 <div id="sparkline-bar2" class="graph sparkline hidden-xs">20,15,8,50,20,40,20,30,20,15,30,20,25,20</div>
             </li> 
+            <li>
+                <div class="summary"> 
+                    <span>Daily Players</span> <h3>2300</h3> 
+                </div> 
+                <div id="sparkline-bar" class="graph sparkline hidden-xs">20,15,8,50,20,40,20,30,20,15,30,20,25,20</div>
+            </li> 
         </ul>
     </div>
-        <div class="row">
-            <div class="col-md-12">
-                <div class="widget box">
-                    <div class="widget-content">
-                        <div class="row">
-                            <div class="col-md-8">
-                                <p class="lead">
-                                    GoPlayMM is a free matchmaking system for Counter Strike: Global Offensive that aims to provide consistent 128tick servers, an easy to use platform, additional maps, in-depth stats to users, and additional features which enhance and build upon Valve's matchmaking concepts. <br /> <br />
-                                    GoPlayMM is entirely web based and only requires a modern web browser, meaning NO third party downloads/clients/etc, which allows Mac and Wine users to join in on the fun!
-                                </p>
-                            </div>
-                            <div class="col-md-4">
-                                <h2>Features</h2>
-                                <ul>
-                                    <li><h3>Fast, Consistent, Cross-Region 128tick servers</h3></li>
-                                    <li><h3>Easy to use, fast, simple, web-based Lobby/Queue System</h3></li>
-                                    <li><h3>No custom client; use vanilla Steam/CS:GO</h3></li>
-                                    <li><h3>Extensive list of Valve and Community maps</h3></li>
-                                    <li><h3>Wide range of in-depth statistics, achivements and graphs</h3></li>
-                                    <li><h3>Smart, skill-based ranking system</h3></li>
-                                    <li><h3>Multi-factor cheat/grief detection and prevention system</h3></li>
-                                    <li><h3>And a ton more!</h3></li>
-                                </ul>
-                            </div>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="widget box">
+                <div class="widget-content">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p class="lead">
+                                GoPlayMM is a free, web-based matchmaking system for Counter Strike: Global Offensive that aims to provide consistent high-performance servers, an easy to use platform with no third-party clients, additional maps, in-depth stats to users, and additional features which enhance and build upon Valve's matchmaking concepts.
+                            </p>
+                            <p>
+                                GoPlayMM strives to provide the honest, fun, and reliable gaming experience CS:GO players deserve. We have a no-bullshit policy, and believe in clearly explaining the facts rather than hiding behind veils of lies. We're proud our entire playform is completely <a href="http://github.com/b1naryth1ef/goplaynao">Open Source</a>. Together with players, we hope to help grow and nuture the CS:GO gaming community. GoPlayMM is 100% free to use, and even if you choose to donate, you won't get any super-special treatment (just a few <a href="/donate">cool</a> features!).
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <h2>Features</h2>
+                            <ul>
+                                <li><h3>Fast, Consistent, Cross-Region 128tick servers</h3></li>
+                                <li><h3>Simple and easy to use web-based Lobby/Queue System</h3></li>
+                                <li><h3>No custom client; use vanilla Steam/CS:GO</h3></li>
+                                <li><h3>Extensive list of Valve and Community maps</h3></li>
+                                <li><h3>Wide range of in-depth statistics, achivements and graphs</h3></li>
+                                <li><h3>Smart, skill-based ranking system</h3></li>
+                                <li><h3>Multi-factor cheat/grief detection and prevention system</h3></li>
+                                <li><h3>And a ton more!</h3></li>
+                            </ul>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 </div>
 
 {% endblock %}

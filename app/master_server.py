@@ -1,7 +1,5 @@
 import socket, thread, json
 
-
-
 class Server(object):
     def __init__(self, host="", port=5595):
         self.host = host
@@ -9,8 +7,8 @@ class Server(object):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.active = False
 
-    def push(self, obj):
-        self.sendall(json.dumps(obj))
+    def push(self, conn, obj):
+        conn.sendall(json.dumps(obj))
 
     def getPacket(self, id):
         if hasattr(self, "packet_%s" % id):
@@ -18,12 +16,9 @@ class Server(object):
         return None
 
     def handle(self, conn, addr):
-        # LOL PROGRAMMING
-        # conn.push = push_json
-
         while True:
             data = conn.recv(2048)
-            if not data: break
+            if not data or not data.strip(): break
 
             try:
                 obj = json.loads(data.strip())
@@ -32,7 +27,7 @@ class Server(object):
                 break
 
             if 'id' in obj:
-                getPacket(obj['id'])(conn, obj)
+                self.getPacket(obj['id'])(conn, obj)
 
         conn.close()
 
@@ -51,4 +46,7 @@ class Server(object):
 
 s = Server()
 s.connect()
-s.loop()
+try:
+    s.loop()
+except:
+    s.s.close()
