@@ -79,7 +79,6 @@ def create_or_login(resp):
 @app.before_request
 def beforeRequest():
     g.user = None
-    g.server = None
 
     # Normal session
     if request.cookies.get("sid"):
@@ -91,18 +90,6 @@ def beforeRequest():
                 resp = flashy("Wow! Something really went wrong. Contact support!")
                 resp.set_cookie('sid', '', expires=0)
                 return resp
-
-    # Server
-    if request.values.get("sid"):
-        if not redis.exists("ss:%s" % request.values.get("sid")):
-            return jsonify({"success": False, "error": 1, "msg": "Session Expired"})
-        s = redis.get("ss:%s" % request.values.get("sid"))
-        try:
-            s = Server.select().where(Server.id == s).get()
-        except Server.DoesNotExist:
-            redis.delete("ss:%s" % request.values.get("sid"))
-            return jsonify({"success": False, "error": 2, "msg": "Session Corrupted!"})
-        g.server = s
 
 def socket_loop(data):
     s, user = data

@@ -3,6 +3,7 @@ Flask-OpenID==1.2.1
 Flask-SocketIO==0.2.2
 Jinja2==2.7.2
 MarkupSafe==0.18
+Pillow==2.3.0
 Twisted==13.2.0
 Werkzeug==0.9.4
 argparse==1.2.1
