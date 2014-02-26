@@ -9,11 +9,6 @@
 #define VERSION "0.1"
 #define MODEL "models/rxg/smokevol.mdl"
 #define DURATION 18.0
-// TODO: cvar all this
-#define HOST "localhost"
-#define PORT 5595
-#define SERVERID 1
-#define SERVERHASH "abcdefghijklmnopqrstuvwxyz"
 
 new Handle:gp_host;
 new Handle:gp_port;
@@ -99,6 +94,7 @@ public OnSocketDisconnected(Handle:socket, any:arg) {
 
 // TODO: handle this situation better
 public OnSocketError(Handle:socket, const errorType, const errorNum, any:arg) {
+    // 111 = conn refused, handle that gracefully
     LogError("socket error %d (errno %d)", errorType, errorNum);
     MatchEnd();
     CloseHandle(socket);
