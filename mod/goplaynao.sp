@@ -188,10 +188,20 @@ public Action:Event_PlayerConnect(Handle:event, const String:name[], bool:dontBr
         decl String:sid[64];
         GetCommunityIDString(networkid, sid, sizeof(sid));
         if (StrContains(PLAYERS, sid) <= 0) {
-            KickClient(GetEventInt(event, "userid"), "You are not part of this match!");
+            LogMessage("Would kick player %s", GetEventInt(event, "userid"));
+            // CreateTimer(2, KickWhileConnecting, GetEventInt(event, "userid"));
+            // KickWhileConnecting(INVALID_HANDLE, );
         }
     }
     return Plugin_Continue;
+}
+
+public Action:KickWhileConnecting(Handle:timer, any:client) {
+    if (!IsClientConnected(client)) {
+        CreateTimer(2, KickWhileConnecting, client);
+    } else {
+        KickClient(client, "You are not part of this match!");
+    }
 }
 
 // -- Libray Like Functions --

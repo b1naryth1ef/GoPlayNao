@@ -495,7 +495,7 @@ class MatchState(object):
     MATCH_STATE_FINISH = 4
     MATCH_STATE_OTHER = 5
 
-class Match(object):
+class Match(BaseModel):
     lobbies = ArrayField(IntegerField)
     config = JSONField()
     server = ForeignKeyField(Server)

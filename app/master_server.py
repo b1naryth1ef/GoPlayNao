@@ -64,7 +64,7 @@ class Connection(object):
 
         return {"success": True, "has_match": True, "match": m.format(forServer=True)}
 
-class Server(object):
+class SServer(object):
     def __init__(self, host="", port=5595):
         self.host = host
         self.port = port
@@ -78,10 +78,10 @@ class Server(object):
 
     def loop(self):
         while self.active:
-            con = Connection(self.s.accept())
-            thread.start_new_thread(con.handle, (   ))
+            con = Connection(*self.s.accept())
+            thread.start_new_thread(con.handle, ())
 
-s = Server()
+s = SServer()
 s.connect()
 try:
     s.loop()
