@@ -4,7 +4,6 @@ Flask-SocketIO==0.2.2
 Jinja2==2.7.2
 MarkupSafe==0.18
 Pillow==2.3.0
-Twisted==13.2.0
 Werkzeug==0.9.4
 argparse==1.2.1
 bcrypt==1.0.2
@@ -26,11 +25,7 @@ python-dateutil==2.2
 python-openid==2.2.5
 redis==2.9.1
 requests==2.2.1
-rethinkdb==1.11.0-2
 six==1.5.2
 treq==0.2.0
-txmongo==0.4.2
-txredisapi==1.0
 ujson==1.33
 wsgiref==0.1.2
-zope.interface==4.1.0

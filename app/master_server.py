@@ -1,23 +1,24 @@
+from database import *
 import socket, thread, json
 
-class Server(object):
-    def __init__(self, host="", port=5595):
-        self.host = host
-        self.port = port
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.active = False
+PLUGIN_VERSION = redis.get("plugin_version") or 1
 
-    def push(self, conn, obj):
-        conn.sendall(json.dumps(obj))
+class Connection(object):
+    def __init__(self, conn, addr):
+        self.conn = conn
+        self.addr = addr
+
+    def push(self, obj):
+        self.conn.sendall(json.dumps(obj))
 
     def getPacket(self, id):
         if hasattr(self, "packet_%s" % id):
             return getattr(self, "packet_%s" % id)
         return None
 
-    def handle(self, conn, addr):
+    def handle(self):
         while True:
-            data = conn.recv(2048)
+            data = self.conn.recv(2048)
             if not data or not data.strip(): break
 
             try:
@@ -27,9 +28,48 @@ class Server(object):
                 break
 
             if 'id' in obj:
-                self.getPacket(obj['id'])(conn, obj)
+                data = self.getPacket(obj['id'])(obj)
+                if data:
+                    self.push(data)
 
-        conn.close()
+        self.conn.close()
+
+    def packet_0(self, data):
+        try:
+            s = Server.select().where(Server.id == data.get("id")).get()
+        except Server.DoesNotExist:
+            return {"sucess": False, "msg": "Invalid Server ID!", "pid": 1}
+
+        if s.hash != data.get("hash"):
+            return {"success": False, "msg": "Invalid Server HASH!", "pid": 1}
+
+        if self.addr not in s.hosts:
+            return {"success": False, "msg": "That IP is not authorized for that server!", "pid": 1}
+
+        version = int(data.get("version", 0))
+        if PLUGIN_VERSION != version:
+            msg = "Invalid Plugin Version, server has %s, master has %" (version, PLUGIN_VERSION)
+            return {"success": False, "msg": msg}
+
+        self.server = s
+
+        if data.get("mid", -1) != -1:
+            # TODO: grab existing match
+            pass
+
+        try:
+            m = self.server.findWaitingMatch()
+        except:
+            return {"success": True, "has_match": False, "match": {}}
+
+        return {"success": True, "has_match": True, "match": m.format(forServer=True)}
+
+class Server(object):
+    def __init__(self, host="", port=5595):
+        self.host = host
+        self.port = port
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.active = False
 
     def connect(self):
         self.s.bind((self.host, self.port))
@@ -38,11 +78,8 @@ class Server(object):
 
     def loop(self):
         while self.active:
-            conn, addr = self.s.accept()
-            thread.start_new_thread(self.handle, (conn, addr))
-
-    def packet_0(self, conn, data):
-        self.push(conn, {"success": True, "msg": "YOLO SWAG!"})
+            con = Connection(self.s.accept())
+            thread.start_new_thread(con.handle, (   ))
 
 s = Server()
 s.connect()

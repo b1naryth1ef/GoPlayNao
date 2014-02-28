@@ -190,7 +190,8 @@ class Server(BaseModel):
         redis.setex("ss:%s" % id, self.id, cls.LIFETIME)
         return id
 
-    def getActiveMatch(self): pass
+    def findWaitingMatch(self):
+        return Match.select().where((Match.server == self) & state == MatchState.MATCH_STATE_PRE).get()
 
 class BanLogType(object):
     BAN_LOG_GENERIC = 1
@@ -484,6 +485,46 @@ class Session(object):
     def expire(cls, id):
         return cls.db.delete("us:%s" % id)
 
+class MatchType(object):
+    MATCH_TYPE_LOBBY = 1
+
+class MatchState(object):
+    MATCH_STATE_PRE = 1
+    MATCH_STATE_SETUP = 2
+    MATCH_STATE_PLAY = 3
+    MATCH_STATE_FINISH = 4
+    MATCH_STATE_OTHER = 5
+
+class Match(object):
+    lobbies = ArrayField(IntegerField)
+    config = JSONField()
+    server = ForeignKeyField(Server)
+    mtype = IntegerField(default=MatchType.MATCH_TYPE_LOBBY)
+    state = IntegerField(default=MatchState.MATCH_STATE_PRE)
+    created = DateTimeField(default=datetime.utcnow)
+
+    def getPlayers(self):
+        for lobby in self.lobbies:
+            for player in lobby.getMembers():
+                yield User.select().where(User.id == player)
+
+    def setDefaultConfig(self):
+        self.config = {
+            "map": "de_nuke"
+        }
+
+    def format(self, forServer=False):
+        data = {
+            "players": [i.steamid for i in self.getPlayers()],
+            "mtype": self.mtype,
+            "state": self.state,
+            "id": self.id
+        }
+        if forServer:
+            data['players'] = ','.join(data['players'])
+
+        data.update(self.config)
+        return data
 
 def load_default_maps():
     print "Loading default maps..."
