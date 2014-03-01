@@ -396,19 +396,40 @@ def api_lobby_action():
     if not isinstance(lobby, Lobby):
         return lobby
 
-    if args.action not in ['leave', 'join', 'start', 'stop', 'kick']:
+    if args.action not in ['quit', 'start', 'stop', 'kick', 'accept']:
         return jsonify({
             "success": False,
             "msg": "Invalid lobby action `%s`!" % args.action
         })
 
-    if args.action == "leave":
-        lobby.stopQueue()
-        pass
+    if args.action == "accept":
+        m = lobby.getMatch()
+        if not m:
+            return jsonify({
+                "success": False,
+                "msg": "No match to accept!"
+            })
 
-    if args.action == "join":
+        m.accept(g.user)
+        accepted = len(m.getMatch().getAccepted())
+
+        # LOL HARDCODED
+        if accepted == 10:
+            m.state = MatchState.MATCH_STATE_SETUP
+            m.server.setup()
+            m.save()
+
+        lobby.sendAction({
+            "type": "accept",
+            "num": accepted,
+            "id": m.id
+        })
+        return jsonify({"success": True})
+
+    if args.action == "quit":
         lobby.stopQueue()
-        pass
+        lobby.userLeave(g.user)
+        return {"success": True}
 
     if args.action == "kick":
         try:
@@ -452,6 +473,13 @@ def api_lobby_action():
             word2 = "bans" if len(errors) > 1 else "ban"
             lobby.sendAction({"type": "msg", "msg": "%s cannot queue, %s active %s!" % (', '.join(errors), word, word2)})
             return jsonify({"success": False, "msg": "%s users in the lobby cannot play!" % len(errors)})
+
+        if len(lobby.getMembers()) > 5:
+            lobby.sendAction({"type": "msg", "msg": "Queue cannot be started with more than 5 players!"})
+            return jsonify({
+                "success": False,
+                "msg": "You cannot queue with more than 5 players!"
+            })
 
         if lobby.state in [LobbyState.LOBBY_STATE_CREATE, LobbyState.LOBBY_STATE_IDLE]:
             lobby.startQueue()

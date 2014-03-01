@@ -38,7 +38,8 @@ var JST = {
 }
 
 var SOUNDS = {
-    invite: "/static/sound/notification.mp3"
+    invite: "/static/sound/notification.mp3",
+    accept: "/static/sound/ding.mp3",
 }
 
 // YOLO BROLO :)
@@ -240,7 +241,20 @@ var pug = {
             case "match":
                 $("#lobby-info-main-accepting").show();
                 break;
+            case "accept":
+                $("#lobby-accepted").text(data.num);
+                if (data.num == 10) {
+                    // Delayed so we can show fancy animations for accepted!
+                    setTimeout(function () {
+                        window.location = "/match/"+data.id;
+                    }, 3000);
+                    pug.lobbyAddAction("Match Found, number "+data.id+"!", "success");
+                    $("#lobby-info-main-accepting").fadeOut();
+                    new Audio(SOUNDS.accept).play()
+                }
+                break;
             default:
+                // sooooo not cool brah
                 console.log("WTF:")
                 console.log(data)
                 break;
@@ -271,8 +285,8 @@ var pug = {
         // Hide old errors
         pug.hidemsg("lobby-maker-err");
 
-        // Make the request
-        // TOOD: clean this up, send much less data as well
+        // Make the request to create a lobby, pug.config is empty for now
+        //  in the future it should contain base settings ??? or be removed ???
         $.ajax("/api/lobby/create", {
             type: "POST",
             data: {
@@ -422,6 +436,21 @@ var pug = {
                 lobbySettingsState.run(0);
             })
         }
+
+        $("#lobby-accept").click(function () {
+            $.ajax("/api/lobby/action", {
+                type: "POST",
+                data: {
+                    id: pug.lobbyid,
+                    action: "accept",
+                },
+                success: function(data) {
+                    if (!data.success) {
+                        alert(data.msg)
+                    }
+                }
+            })
+        })
 
         $("#lobby-friends").delegate(".lobby-invite", "click", function (e) {
             e.preventDefault();

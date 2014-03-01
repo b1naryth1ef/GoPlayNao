@@ -1,7 +1,7 @@
 from peewee import *
 from playhouse.postgres_ext import *
 from datetime import *
-import dateutil.relativedelta
+from dateutil.relativedelta import relativedelta
 from flask import request, g
 from steam import getSteamAPI
 import bcrypt, json, redis, random, string, time
@@ -161,7 +161,7 @@ class Ban(BaseModel):
         return log.id
 
 class ServerType():
-    SERVER_PUG = 1
+    SERVER_MATCH = 1
     SERVER_DEV = 2
     SERVER_PRIV = 3
     SERVER_OTHER = 4
@@ -175,10 +175,12 @@ class Server(BaseModel):
 
     lastping = DateTimeField()
 
-    mode = IntegerField(default=ServerType.SERVER_PUG)
+    mode = IntegerField(default=ServerType.SERVER_MATCH)
 
     owner = ForeignKeyField(User)
     active = BooleanField()
+
+    def setup(self): pass
 
     def createSession(self):
         while True:
@@ -244,6 +246,14 @@ class Lobby(BaseModel):
         self.joinLobby(user)
         return self
 
+    def getMatch(self):
+        try:
+            return Match.select().where(Match.lobbies.contains(self.id) &
+                        (Match.state == MatchState.MATCH_STATE_PRE) &
+                        (Match.mtype == MatchType.MATCH_TYPE_LOBBY)).get()
+        except Match.DoesNotExist:
+            return None
+
     def setMaps(self, maps=[]):
         maps = [Map.select().where(Map.name == i).get().id for i in maps]
         self.config['maps'] = maps or [i.id for i in Map.select().where(Map.level == self.owner.level)]
@@ -283,12 +293,6 @@ class Lobby(BaseModel):
     def getMembers(self):
         return redis.smembers("lobby:%s:members" % self.id)
 
-    def getActiveMembers(self):
-        """
-        Return members that are in the lobby
-        """
-        return redis.smembers("lobby:%s:memberslive" % self.id)
-
     def sendAction(self, action):
         action['lobby'] = self.id
         for user in self.getMembers():
@@ -327,16 +331,19 @@ class Lobby(BaseModel):
         })
         redis.set("user:%s:lobby:%s:ping" % (u.id, self.id), time.time())
 
-    def kickUser(self, u):
+    def userLeave(self, u, msg="%s has left the lobby"):
         self.sendAction({
             "type": "quit",
             "member": u.id,
-            "msg": "%s was kicked from the lobby" % u.username
+            "msg": msg % u.username
         })
+
         redis.srem("lobby:%s:members" % self.id, u.id)
         if self.state == LobbyState.LOBBY_STATE_SEARCH:
             self.stopQueue()
 
+    def kickUser(self, u):
+        self.userLeave(u, msg="%s was kicked from the lobby")
         for i in Invite.select().where((Invite.ref == self.id) & (Invite.to_user == u)):
             if i.valid():
                 i.state = InviteState.INVITE_EXPIRED
@@ -374,8 +381,8 @@ class Invite(BaseModel):
         if self.duration:
             if (self.created + relativedelta(seconds=self.duration)) < datetime.utcnow():
                 return False
-        if self.expires:
-            if self.expires < datetime.utcnow():
+        if self.expiresat:
+            if self.expiresat < datetime.utcnow():
                 return False
         if self.state != InviteState.INVITE_WAITING:
             return False
@@ -512,10 +519,15 @@ class MatchType(object):
     MATCH_TYPE_LOBBY = 1
 
 class MatchState(object):
+    # Accepting
     MATCH_STATE_PRE = 1
+    # Waiting for joins
     MATCH_STATE_SETUP = 2
+    # Playing
     MATCH_STATE_PLAY = 3
+    # It's over m8
     MATCH_STATE_FINISH = 4
+    # LOL WAT
     MATCH_STATE_OTHER = 5
 
 class Match(BaseModel):
@@ -525,6 +537,12 @@ class Match(BaseModel):
     mtype = IntegerField(default=MatchType.MATCH_TYPE_LOBBY)
     state = IntegerField(default=MatchState.MATCH_STATE_PRE)
     created = DateTimeField(default=datetime.utcnow)
+
+    def getAccepted(self):
+        return redis.smembers("match:%s:accepted" % self.id)
+
+    def accept(self, u):
+        redis.sadd("match:%s:accepted" % self.id, u.id)
 
     def getPlayers(self):
         for lobby in self.lobbies:

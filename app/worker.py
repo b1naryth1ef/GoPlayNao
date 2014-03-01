@@ -20,12 +20,12 @@ LOBBY_TIMEOUT = 15
 @schedule(seconds=5)
 def task_user_timeout():
     for lobby in Lobby.select().where((Lobby.state != LobbyState.LOBBY_STATE_UNUSED) & (Lobby.state != LobbyState.LOBBY_STATE_PLAY)):
-        for member in lobby.getActiveMembers():
+        for member in lobby.getMembers():
             u = User.select().where(User.id == member).get()
-            if (time.time() - float(redis.get("user:%s:lobby:%s:ping" % (lobby.id, member)) or 0)) > 20:
+            if (time.time() - float(redis.get("user:%s:lobby:%s:ping" % (member, lobby.id)) or 0)) > 20:
                 lobby.sendAction({
                     "type": "quit",
-                    "member": u.format(),
+                    "member": u.id,
                     "msg": "%s timed out from the lobby!" % u.username
                 })
                 redis.srem("lobby:%s:members" % lobby.id, u.id)
@@ -46,7 +46,7 @@ def task_lobby_timeout():
                 print "Cleaning up member!"
                 lobby.sendAction({
                     "type": "quit",
-                    "member": u.format(),
+                    "member": u.id,
                     "msg": "%s timed out from the lobby!" % u.username
                 })
                 redis.srem("lobby:%s:members" % lobby.id, u.id)
@@ -98,16 +98,37 @@ def task_stats_cache():
     data = {
         "current": {
             "players": {
-                "searching": 120,
-                "playing": 300
+                "searching": 0,
+                "playing": 0
+            },
+            "lobbies": {
+                "searching": 0,
+                "playing": 0
             },
             "servers": {
-                "open": 5,
-                "used": 22,
+                "open": 0,
+                "used": 0,
             },
-            "matches": 38
+            "matches": 0
         }
     }
+
+    for lobby in Lobby.select().where(Lobby.state == LobbyState.LOBBY_STATE_SEARCH):
+        data['current']['players']['searching'] += len(lobby.getMembers())
+        data['current']['lobbies']['searching'] += 1
+
+    for lobby in Lobby.select().where(Lobby.state == LobbyState.LOBBY_STATE_PLAY):
+        data['current']['players']['playing'] += len(lobby.getMembers())
+        data['current']['lobbies']['playing'] += 1
+
+    for server in Server.select().where((Server.mode == ServerType.SERVER_MATCH) & Server.active == True):
+        if Match.select.where((Match.server == server) &
+                (Match.state != MatchState.MATCH_STATE_FINISH)):
+            data['current']['servers']['used'] += 1
+            data['current']['matches'] += 1
+
+    data['current']['servers']['free'] = Server.select().where((Server.mode == ServerType.SERVER_MATCH)
+        & Server.active == True).count() - data['current']['servers']['used']
 
     redis.set("stats_cache", json.dumps(data))
     redis.publish("global", json.dumps({"type": "stats", "data": data}))
