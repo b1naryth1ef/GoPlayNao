@@ -522,6 +522,7 @@ def api_lobby_invite():
     i.to_user = u
     i.invitetype = InviteType.INVITE_TYPE_LOBBY
     i.ref = l.id
+    i.duration = (60 * 5) # 5 minutes for lobby invites
     i.save()
     i.notify()
 

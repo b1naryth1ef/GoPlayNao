@@ -368,10 +368,14 @@ class Invite(BaseModel):
     ref = IntegerField(null=True)
     created = DateTimeField(default=datetime.utcnow)
     duration = IntegerField(default=0)
+    expiresat = DateTimeField(null=True)
 
     def valid(self):
         if self.duration:
             if (self.created + relativedelta(seconds=self.duration)) < datetime.utcnow():
+                return False
+        if self.expires:
+            if self.expires < datetime.utcnow():
                 return False
         if self.state != InviteState.INVITE_WAITING:
             return False
