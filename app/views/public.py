@@ -51,6 +51,10 @@ def public_user(user=None):
 def public_bans():
     return render_template("bans.html")
 
+@public.route("/about")
+def public_about():
+    return render_template("about.html")
+
 # @public.route("/login")
 # def public_login():
 #     args, success = require(username=str, password=str)

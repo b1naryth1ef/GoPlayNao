@@ -78,23 +78,12 @@
                 <li class="nav-toggle"><a href="javascript:void(0);" title=""><i class="icon-reorder"></i></a></li> 
             </ul>
             <a class="navbar-brand" href="index.html">
-                <!-- <img src="/static/img/logo.png" alt="logo"/> -->
                 <strong>GoPlayMM</strong>
             </a>
             <ul class="nav navbar-nav navbar-right">
                 {% if g.user %}
-                    <li class="dropdown"> <a href="#" class="dropdown-toggle" data-toggle="dropdown"> <i class="icon-envelope"></i> <span class="badge">5</span> </a> 
-                        <ul class="dropdown-menu extended notification"> 
-                            <li class="title"><p>You have 5 new notifications</p></li> 
-                            <li>
-                                <a href="javascript:void(0);"><span class="label label-success"><i class="icon-plus"></i></span> 
-                                    <span class="message">New user registration.</span> 
-                                    <span class="time">1 mins</span>
-                                </a>
-                            </li> 
-                            <li class="footer"> <a href="javascript:void(0);">View all notifications</a> </li> 
-                        </ul>
-                    </li>
+                    <li><a href="/lobby"><i class="icon-group"></i> New Lobby</a></li>
+                    <li><a href="/friends"><i class="icon-heart"></i> <span class="badge">5</span> </a></li>
                     <li class="dropdown user">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown"><span class="username"></span>{{ g.user.username }} <i class="icon-caret-down small"></i></a> 
                         <ul class="dropdown-menu"> 
@@ -122,36 +111,24 @@
                 </form>
                 <div class="sidebar-search-results"> <i class="icon-remove close"></i> 
                     <div class="title"> Players</div>
-                    <ul id="search-results" class="notifications"> 
-<!--                         <li>
-                            <a href=""> 
-                                <div class="col-left"> 
-                                    <span class="label label-info"><i class="icon-star"></i></span>
-                                </div>
-                                <div class="col-right with-margin"> 
-                                    <span class="message"><strong>FreddyCatKing</strong></span> 
-                                    <span class="time">32 Pugs Played</span>
-                                </div>
-                            </a> 
-                        </li> -->
-                    </ul>
+                    <ul id="search-results" class="notifications"></ul>
                 </div>
                 <ul id="nav"> 
                     <li class="current">
                         <a href="/">
                         <i class="icon-dashboard"></i>Homepage</a>
                     </li>
+                    <li><a href="/about"><i class="icon-book"></i>About</a></li>
                     {% if g.user %}
-                        <li><a href="/lobby"><i class="icon-group"></i>Create Lobby</a></li>
-                        <li><a href="/friends"><i class="icon-smile"></i>Friends <span class="label label-info pull-right">6</span></a></li>
+                        <!--<li><a href="/lobby"><i class="icon-group"></i>Create Lobby</a></li>-->
+                       <!--  <li><a href="/friends"><i class="icon-smile"></i>Friends <span class="label label-info pull-right">6</span></a></li> -->
                         <li><a href="#"><i class="icon-list"></i>Matches <span class="label label-info pull-right">332</span></a></li>
                         <li><a href="#"><i class="icon-bar-chart"></i>Stats</a></li>
                         <li><a href="#"><i class="icon-gears"></i>Settings</a></li>
                     {% else %}
-                        <li><a href="#"><i class="icon-group"></i>About</a></li>
                         <li><a href="#"><i class="icon-group"></i>Recent Matches</a></li>
-                        <li><a href="/bans"><i class="icon-group"></i>Banlist</a></li>
                     {% endif %}
+                    <li><a href="/bans"><i class="icon-remove"></i>Banlist</a></li>
                 </ul>
                 <div class="sidebar-title"> 
                     <span>Notifications</span> 

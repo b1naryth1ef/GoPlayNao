@@ -55,7 +55,7 @@ def task_lobby_timeout():
 @schedule(minutes=5)
 def task_lobby_cleanup():
     for lobby in Lobby.select().where(Lobby.state != LobbyState.LOBBY_STATE_UNUSED):
-        if len(lobby.members): continue
+        if len(lobby.getMembers()): continue
         print "Cleaning up lobby: %s" % lobby.id
         lobby.state = LobbyState.LOBBY_STATE_UNUSED
         lobby.cleanup()
