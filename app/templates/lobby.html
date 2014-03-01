@@ -49,13 +49,6 @@
                         Whoops, looks like B1n hasn't added any awesome/kick-ass options for lobby creation yet!
                     </p>
                     <button id="btn-create-lobby" class="btn btn-success btn-large">Create Lobby</button>
-                    <div class="row" style="padding-top: 20px;">
-                        <div class="col-md-12">
-                            <select multiple="multiple" class="image-picker show-html" id="lobby-map-list"></select>
-                        </div>
-                    </div>
-
-                    
                 </div>
             </div>
         </div>
@@ -86,7 +79,16 @@
                             <button id="lobby-queue-start" class="owner btn btn-success" style="display:none">Start Queue!</button>
                             <button id="lobby-settings-edit" class="owner btn btn-primary" style="display:none; margin-left: 10px">Edit Settings!</button>
                             <button id="lobby-leave" class="not-owner btn btn-danger" style="display:none">Leave Lobby</button>
+                            <button id="lobby-settings-save" class="btn btn-success" style="display:none">Save Settings!</button>
                         </p>
+                    </div>
+                    <div id="lobby-info-main-accepting" style="display: none;">
+                        <button id="lobby-accept" class="btn btn-lg btn-success">Accept Match!</button>
+                    </div>
+                    <div class="row" style="padding-top: 20px; display: none" id="lobby-info-main-selection">
+                        <div class="col-md-12">
+                            <select multiple="multiple" class="image-picker show-html" id="lobby-map-list"></select>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -42,8 +42,7 @@ class User(BaseModel):
 
     def isOnline(self):
         value = redis.get("user:%s:ping" % self.id) or 0
-        print time.time() - float(value)
-        if (time.time() - float(value)) < 60:
+        if (time.time() - float(value)) < 30:
             return True
         return False
 
@@ -233,18 +232,20 @@ class Lobby(BaseModel):
         self.owner = user
         self.invited = []
 
-        maps = [Map.select().where(Map.name == i).get().id for i in maps]
-
         # Default Config
         self.config = {
-            "maps": maps or [i.id for i in Map.select().where(Map.level == self.owner.level)],
             "type": "ranked",
             "region": 0,
             "ringer": False
         }
+        self.setMaps(maps)
         self.save()
         self.joinLobby(user)
         return self
+
+    def setMaps(self, maps=[]):
+        maps = [Map.select().where(Map.name == i).get().id for i in maps]
+        self.config['maps'] = maps or [i.id for i in Map.select().where(Map.level == self.owner.level)]
 
     def canJoin(self, user):
         if self.owner == user:
@@ -317,19 +318,21 @@ class Lobby(BaseModel):
         redis.delete("lobby:%s:*" % self.id)
 
     def joinLobby(self, u):
+        if u not in self.getMembers():
+            redis.sadd("lobby:%s:members" % self.id, u.id)
         self.sendAction({
             "type": "join",
             "member": u.format(),
             "msg": "%s joined the lobby" % u.username
         })
         redis.sadd("lobby:%s:members" % self.id, u.id)
+        redis.set("user:%s:lobby:%s:ping" % (u.id, self.id), time.time())
 
     def getSkillDifference(self, other):
         """
         TODO: get a avg skill diff for two lobbies
         """
         return 0
-
 
 class InviteType(object):
     INVITE_TYPE_LOBBY = 1

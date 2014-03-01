@@ -22,6 +22,7 @@ def public_lobby(id=None):
             return flashy("You cannt join that lobby!")
         if lobby.state == LobbyState.LOBBY_STATE_UNUSED:
             return flashy("That lobby has expired!")
+        lobby.joinLobby(g.user)
     return render_template("lobby.html", lobby=id)
 
 @public.route("/friends")

@@ -63,7 +63,7 @@ def task_lobby_cleanup():
 
 WORKSHOP_ID = "231287804"
 
-@schedule(seconds=30)
+@schedule(minutes=5)
 def task_load_workshop_maps():
     q = s.getWorkshopFile(WORKSHOP_ID)
 
@@ -194,8 +194,8 @@ class MatchFinder(object):
                 else:
                     teamb.append(entry)
 
-            skilla = sum(map(teama, lambda z: z.getSkillDifference()))
-            skillb = sum(map(teamb, lambda z: z.getSkillDifference()))
+            skilla = sum(map(lambda z: z.getSkillDifference(), teama))
+            skillb = sum(map(lambda z: z.getSkillDifference(), teamb))
 
             if abs(skilla - skillb) >= max_skill:
                 return teama, teamb
@@ -267,6 +267,9 @@ class MatchFinder(object):
                 if not maps:
                     continue
 
+                for lobby in (x+y):
+                    lobby.sendAction({"type": "match"})
+
 FINDER = MatchFinder()
 
 def schedule(**kwargs):
@@ -277,6 +280,8 @@ def schedule(**kwargs):
 
 def run():
     thread.start_new_thread(FINDER.loop, ())
+    # Run once on startup
+    thread.start_new_thread(task_load_workshop_maps, ())
     while True:
         time.sleep(1)
         for name, timeframe in schedules.items():

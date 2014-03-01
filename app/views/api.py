@@ -286,7 +286,9 @@ def api_lobby_create():
 
     Returns a lobby object.
     """
-    lobby = Lobby.getNew(g.user, request.values.getlist("maps[]"))
+    config = json.loads(request.values.get("config"))
+
+    lobby = Lobby.getNew(g.user, config.get("maps", []))
     data = lobby.format()
     data['success'] = True
     return jsonify(data)
@@ -315,6 +317,29 @@ def pre_lobby(id):
             "msg": "You do not have permission to that lobby!"
         })
     return lobby
+
+@api.route("/lobby/edit", methods=['POST'])
+@authed()
+def api_lobby_edit():
+    args, _ = require(id=int)
+
+    lobby = pre_lobby(args.id)
+    if not isinstance(lobby, Lobby):
+        return lobby
+
+    if lobby.owner != g.user:
+        return jsonify({
+            "success": False,
+            "msg": "You do not have permission to edit that lobby!"
+        })
+
+    data = json.loads(request.values.get("config"))
+    lobby.setMaps(data.get('maps', []))
+    lobby.save()
+
+    return jsonify({
+        "success": True,
+    })
 
 @api.route("/lobby/info")
 @authed()

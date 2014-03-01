@@ -41,10 +41,42 @@ var SOUNDS = {
     invite: "/static/sound/notification.mp3"
 }
 
+// YOLO BROLO :)
+function buildState(statea, stateb) {
+    var obj = {
+        a: statea,
+        b: stateb,
+        c: 1,
+        run: function (i) {
+            obj.c = i;
+            this.flip(false);
+        },
+        flip: function (change) {
+            if (change == undefined) { change = true; }
+            if (obj.c) {
+                var a = obj.a, b = obj.b;
+                if (change) obj.c = 0;
+            } else {
+                var a = obj.b, b = obj.a;
+                if (change) obj.c = 1;
+            }
+            for (i in a) {
+                $(a[i]).show()
+            }
+            for (i in b) {
+                $(b[i]).hide()
+            }
+        }
+    }
+    obj.flip()
+    return obj
+}
+
 var pug = {
     lobbyid: null,
     lobbypoll: 0,
     lobbydata: null,
+    lobbymembers: [],
     config: {},
     pollLobbyInterval: null,
     getStatsInterval: null,
@@ -146,8 +178,6 @@ var pug = {
     },
 
     handleGlobal: function (msg) {
-        console.log(msg)
-
         switch (msg.type) {
             case "stats":
                 pug.handleStats(msg.data);
@@ -179,34 +209,6 @@ var pug = {
             pug.lobbyJoin(id);
         } else {
             $("#lobby").hide();
-            $.ajax("/api/maps", {
-                success: function (data) {
-                    base = pug.getLocal("maps");
-                    _.each(data, function (v) {
-                        // If we have some local stored data, set map selection
-                        //  based on that. Otherwise just set every map as selected
-                        if (base) {
-                            // If we exist, we're selected otherwise gtfo
-                            if (base.indexOf(v.name) > -1) {
-                                v.selected = true;
-                            } else {
-                                v.selected = false;
-                            }
-                        } else {
-                            v.selected = true;
-                        }
-                        $("#lobby-map-list").append(JST.lobbyMap(v))
-                    })
-
-                    $("#lobby-map-list").imagepicker({
-                        show_label: true,
-                        changed: function (oldv, newv) {
-                            pug.config.maps = newv;
-                            pug.storeLocal("maps", newv)
-                        }
-                    })
-                }
-            })
             $("#btn-create-lobby").click(pug.lobbyCreate);
         }
     },
@@ -231,6 +233,9 @@ var pug = {
             case "msg":
                 pug.lobbyAddAction(data.msg, data.cls || "danger");
                 break;
+            case "match":
+                $("#lobby-info-main-accepting").show();
+                break;
             default:
                 console.log("WTF:")
                 console.log(data)
@@ -241,7 +246,6 @@ var pug = {
     lobbyCreate: function(e) {
         // This should never happen unless people are firing manual events
         if (pug.lobbyid) {
-            console.log("Wat. Da. Faq?");
             alert("Something went wrong! (Refresh the page?)");
             return
         }
@@ -264,11 +268,13 @@ var pug = {
         pug.hidemsg("lobby-maker-err");
 
         // Make the request
+        // TOOD: clean this up, send much less data as well
         $.ajax("/api/lobby/create", {
             type: "POST",
-            data: pug.config,
+            data: {
+                config: JSON.stringify(pug.config)
+            },
             success: function(data) {
-                console.log(data)
                 // Well dix, looks like we failed...
                 if (!data.success) {
                     error(data);
@@ -287,7 +293,6 @@ var pug = {
     },
 
     lobbyJoin: function(id) {
-        console.log("lobbyJoin")
         if (!pug.lobbyid) {
             pug.lobbyid = id;
         }
@@ -297,10 +302,11 @@ var pug = {
                 id: pug.lobbyid
             },
             success: function (data) {
-                console.log(data)
                 if  (data.success) {
                     pug.lobbydata = data.lobby
                     pug.lobbyRender()
+                } else {
+                    alert(data.msg)
                 }
             }
         });
@@ -308,7 +314,11 @@ var pug = {
     },
     lobbyAddMember: function(m) {
         var isLeader = (USER.id == pug.lobbydata.owner)
+        if ($.inArray(m.id, pug.lobbymembers) != -1) {
+            return;
+        }
         $("#lobby-member-list").append(JST.lobbyMember({m: m, leader: isLeader, us: USER.id}));
+        pug.lobbymembers.push(m.id)
     },
 
     lobbyRmvMember: function(id) {
@@ -320,11 +330,46 @@ var pug = {
             success: function (data) {
                 if (data.success) {
                     $.each(data.friends.online, function(_, v) {
+                        if ($.inArray(v.id, pug.lobbymembers) != -1) {
+                            return;
+                        }
                         $("#lobby-friends-list").append(JST.lobbyFriend({f: v}))
                     });
                 }
             }
         })
+    },
+
+    lobbyRenderMapSelection: function() {
+        $.ajax("/api/maps", {
+            success: function (data) {
+                base = pug.getLocal("maps");
+                _.each(data, function (v) {
+                    // If we have some local stored data, set map selection
+                    //  based on that. Otherwise just set every map as selected
+                    if (base) {
+                        // If we exist, we're selected otherwise gtfo
+                        if (base.indexOf(v.name) > -1) {
+                            v.selected = true;
+                        } else {
+                            v.selected = false;
+                        }
+                    } else {
+                        v.selected = true;
+                    }
+                    $("#lobby-map-list").append(JST.lobbyMap(v))
+                })
+
+                $("#lobby-map-list").imagepicker({
+                    show_label: true,
+                    changed: function (oldv, newv) {
+                        pug.config.maps = newv;
+                        pug.storeLocal("maps", newv)
+                    }
+                })
+            }
+        })
+
     },
 
     lobbyRender: function() {
@@ -339,15 +384,40 @@ var pug = {
             $(".not-owner").show()
         } else {
             $(".owner").show()
+            pug.lobbyRenderMapSelection();
         }
 
-        pug.lobbyRenderFriends();
+        // Eventaully we should turn this into a websocket thing
+        setInterval(pug.lobbyRenderFriends(), 1000 * 10);
 
         $.each(pug.lobbydata.members, function(_, v) {
-            console.log(v);
             pug.lobbyAddMember(v)
         })
 
+        if (pug.lobbydata.owner == USER.id) {
+            var lobbySettingsState = buildState(["#lobby-queue-start", "#lobby-settings-edit"], ["#lobby-info-main-selection", "#lobby-settings-save"]);
+
+            $("#lobby-settings-save").click(function () {
+                $.ajax("/api/lobby/edit", {
+                    type: "POST",
+                    data: {
+                        id: pug.lobbyid,
+                        config: JSON.stringify(pug.config)
+                    },
+                    success: function(data) {
+                        if (!data.success) {
+                            alert(data.msg);
+                        }
+                    },
+                })
+
+                lobbySettingsState.run(1);
+            })
+
+            $("#lobby-settings-edit").click(function () {
+                lobbySettingsState.run(0);
+            })
+        }
 
         $("#lobby-friends").delegate(".lobby-invite", "click", function (e) {
             e.preventDefault();
@@ -473,8 +543,6 @@ var pug = {
     friends: function() {
         pug.vglobal();
         $(".friends-unfriend").click(function (e) {
-            console.log($($(this).parent()).attr("id"))
-            console.log($(this))
             $.ajax("/api/users/unfriend", {
                 type: "POST",
                 data: {
@@ -564,7 +632,7 @@ $(document).ready(function () {
     pug.getStats();
 
     // Warn users that do not have good support for our features
-    if (!Modernizr.websockets || !Modernizr.localstorage || !Modernizr.history || !window.webkitNotifications) {
+    if (!Modernizr.websockets || !Modernizr.localstorage || !Modernizr.history || !window.webkitNotifications || !window.JSON) {
         $(".bad-browser-alert").fadeIn();
     }
 });
