@@ -240,6 +240,7 @@ class Lobby(BaseModel):
         }
         self.setMaps(maps)
         self.save()
+        self.cleanup()
         self.joinLobby(user)
         return self
 
@@ -318,15 +319,28 @@ class Lobby(BaseModel):
         redis.delete("lobby:%s:*" % self.id)
 
     def joinLobby(self, u):
-        if u not in self.getMembers():
-            redis.sadd("lobby:%s:members" % self.id, u.id)
+        redis.sadd("lobby:%s:members" % self.id, u.id)
         self.sendAction({
             "type": "join",
             "member": u.format(),
             "msg": "%s joined the lobby" % u.username
         })
-        redis.sadd("lobby:%s:members" % self.id, u.id)
         redis.set("user:%s:lobby:%s:ping" % (u.id, self.id), time.time())
+
+    def kickUser(self, u):
+        self.sendAction({
+            "type": "quit",
+            "member": u.id,
+            "msg": "%s was kicked from the lobby" % u.username
+        })
+        redis.srem("lobby:%s:members" % self.id, u.id)
+        if self.state == LobbyState.LOBBY_STATE_SEARCH:
+            self.stopQueue()
+
+        for i in Invite.select().where((Invite.ref == self.id) & (Invite.to_user == u)):
+            if i.valid():
+                i.state = InviteState.INVITE_EXPIRED
+                i.save()
 
     def getSkillDifference(self, other):
         """
@@ -359,6 +373,8 @@ class Invite(BaseModel):
         if self.duration:
             if (self.created + relativedelta(seconds=self.duration)) < datetime.utcnow():
                 return False
+        if self.state != InviteState.INVITE_WAITING:
+            return False
         return True
 
     @classmethod

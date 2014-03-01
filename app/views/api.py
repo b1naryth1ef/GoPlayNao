@@ -396,7 +396,7 @@ def api_lobby_action():
     if not isinstance(lobby, Lobby):
         return lobby
 
-    if args.action not in ['leave', 'join', 'edit', 'start', 'stop']:
+    if args.action not in ['leave', 'join', 'start', 'stop', 'kick']:
         return jsonify({
             "success": False,
             "msg": "Invalid lobby action `%s`!" % args.action
@@ -409,6 +409,30 @@ def api_lobby_action():
     if args.action == "join":
         lobby.stopQueue()
         pass
+
+    if args.action == "kick":
+        try:
+            u = User.select().where(User.id == request.values.get("user")).get()
+        except User.DoesNotExist:
+            return jsonify({
+                "success": False,
+                "msg": "Invalid User!"
+            })
+
+        if lobby.owner == u:
+            return jsonify({
+                "success": False,
+                "msg": "Cannot kick yourself!"
+            })
+
+        if str(u.id) not in lobby.getMembers():
+            return jsonify({
+                "success": False,
+                "msg": "User not in lobby!"
+            })
+
+        lobby.kickUser(u)
+        return jsonify({"success": True})
 
     if lobby.owner != g.user:
         return jsonify({
@@ -434,6 +458,7 @@ def api_lobby_action():
             return jsonify({"success": True})
         else:
             return jsonify({"success": False, "msg": "Lobby Already Queued"})
+
     if args.action == "stop":
         if lobby.state in [LobbyState.LOBBY_STATE_SEARCH]:
             lobby.stopQueue()

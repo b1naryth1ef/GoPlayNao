@@ -19,7 +19,7 @@ var JST = {
         '<td><a href="" id="<%= f.id %>" class="label label-primary lobby-invite">Invite</a></td></tr>'),
 
     lobbyMember: _.template('<tr id="member-<%= m.id %>"><td><%= m.username %></td>'+
-        '<% if (leader && m.id != us) { %><td><a href="" class="label label-danger lobby-kick">kick</a></td><% } %></tr>'),
+        '<% if (leader && m.id != us) { %><td id="<%= m.id %>"><a href="" id="lobby-kick-member" class="label label-danger lobby-kick">kick</a></td><% } %></tr>'),
 
     lobbyMap: _.template('<option <%= selected ? "selected" : ""%> style="height: 100px; width: 100px;"'+
         ' data-img-src="/api/maps/image?map=<%- id %>&height=200&width=300"'+
@@ -223,7 +223,11 @@ var pug = {
                 pug.lobbyAddAction(data.msg, "success");
                 break;
             case "quit":
-                pug.lobbyRmvMember(data.member.id);
+                if (data.member == USER.id) {
+                    alert("You've been kicked from the lobby!");
+                    window.location = "/"
+                }
+                pug.lobbyRmvMember(data.member);
                 pug.lobbyAddAction(data.msg, "danger");
                 break;
             case "state":
@@ -428,8 +432,26 @@ var pug = {
                     lid: pug.lobbyid,
                     uid: $(this).attr("id")
                 }
+            });
+        });
+
+        $("#lobby-list").delegate("#lobby-kick-member", "click", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $.ajax("/api/lobby/action", {
+                type: "POST",
+                data: {
+                    id: pug.lobbyid,
+                    action: "kick",
+                    user: $(this).parent().attr("id")
+                },
+                success: function(data) {
+                    if (!data.success) {
+                        alert(data.msg)
+                    }
+                }
             })
-        })
+        });
 
         $("#lobby-queue-start").click(function () {
             $.ajax("/api/lobby/action", {
