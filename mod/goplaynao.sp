@@ -144,6 +144,7 @@ public MatchStart() {
     Format(buffer, sizeof(buffer), "match-log-%d.txt", MATCH_ID);
     file = OpenFile(buffer, "w");
     LogLine("STARTED!");
+    ServerCommand("tv_record match_%d", MATCH_ID);
 }
 
 // Flushes and closes the logfile
