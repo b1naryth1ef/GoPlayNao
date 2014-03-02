@@ -31,6 +31,7 @@ class User(BaseModel):
     last_login = DateTimeField(default=datetime.utcnow)
 
     ips = ArrayField(CharField, default=[])
+    blocked = ArrayField(CharField, default=[])
 
     # Permissions
     level = IntegerField(default=0)
@@ -166,30 +167,35 @@ class ServerType():
     SERVER_PRIV = 3
     SERVER_OTHER = 4
 
+class ServerRegion():
+    REGION_NA = 0
+    REGION_NA_IL = 1
+
 class Server(BaseModel):
     name = CharField()
-    region = CharField()
-    rcon = CharField()
+    region = IntegerField(default=ServerRegion.REGION_NA)
     hash = CharField()
     hosts = ArrayField(CharField)
 
-    lastping = DateTimeField()
+    lastping = DateTimeField(default=datetime.utcnow)
 
     mode = IntegerField(default=ServerType.SERVER_MATCH)
 
     owner = ForeignKeyField(User)
     active = BooleanField()
 
+    @classmethod
+    def getFreeServer(cls):
+        free = []
+        for server in Server.select().where((Server.mode == ServerType.SERVER_MATCH) &
+                (Server.active == True)):
+            if Match.select().where((Match.server == server) &
+                    (Match.state != MatchState.MATCH_STATE_FINISH)).count():
+                continue
+            free.append(server)
+        return free
+
     def setup(self): pass
-
-    def createSession(self):
-        while True:
-            id = get_random_number(SESSION_ID_SIZE)
-            if not redis.exists("ss:%s" % id):
-                break
-
-        redis.setex("ss:%s" % id, self.id, cls.LIFETIME)
-        return id
 
     def findWaitingMatch(self):
         return Match.select().where((Match.server == self) & state == MatchState.MATCH_STATE_PRE).get()
@@ -308,6 +314,7 @@ class Lobby(BaseModel):
             "state": self.state,
             "msg": "Queue started"
         })
+        redis.publish("lobby-queue", self.id)
 
     def stopQueue(self):
         if self.state == LobbyState.LOBBY_STATE_IDLE: return
@@ -318,9 +325,11 @@ class Lobby(BaseModel):
             "state": self.state,
             "msg": "Queue stopped"
         })
+        # TODO: handle this state within workers
 
     def cleanup(self):
-        redis.delete("lobby:%s:*" % self.id)
+        for key in redis.keys("lobby:%s:*" % self.id):
+            redis.delete(key)
 
     def joinLobby(self, u):
         redis.sadd("lobby:%s:members" % self.id, u.id)
@@ -536,7 +545,11 @@ class Match(BaseModel):
     server = ForeignKeyField(Server)
     mtype = IntegerField(default=MatchType.MATCH_TYPE_LOBBY)
     state = IntegerField(default=MatchState.MATCH_STATE_PRE)
+    size = IntegerField(default=10)
     created = DateTimeField(default=datetime.utcnow)
+
+    def cleanup(self):
+        redis.delete("match:%s:accepted" % self.id)
 
     def getAccepted(self):
         return redis.smembers("match:%s:accepted" % self.id)
@@ -581,7 +594,7 @@ def load_default_maps():
         print "  Loaded map %s, %s" % (m.title, m.id)
 
 if __name__ == "__main__":
-    for table in [User, Server, Ban, BanLog, Lobby, Invite, Friendship, Map]:
+    for table in [User, Server, Ban, BanLog, Lobby, Invite, Friendship, Map, Match]:
         table.drop_table(True, cascade=True)
         table.create_table(True)
 
@@ -604,5 +617,14 @@ if __name__ == "__main__":
     b.active = True
     b.source = "MMAC"
     b.save()
+
+    s = Server()
+    s.name = "Test Server #1"
+    s.region = ServerRegion.REGION_NA_IL
+    s.hash = get_random_number(32)
+    s.hosts = ["127.0.0.1", "localhost"]
+    s.owner = u
+    s.active = True
+    s.save()
 
     print "Test User: %s" % u.id

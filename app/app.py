@@ -124,7 +124,7 @@ def socket_connect():
     beforeRequest()
     ns = request.namespace.socket['/api/poll']
     ns.spawn(socket_loop, (request.namespace.socket['/api/poll'], g.user))
-    redis.set("user:%s:ping" % g.user.id, time.time())
+    if g.user: redis.set("user:%s:ping" % g.user.id, time.time())
 
 @socketio.on("ping", namespace="/api/poll")
 def socket_ping(data):

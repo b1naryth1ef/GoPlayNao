@@ -410,11 +410,12 @@ def api_lobby_action():
                 "msg": "No match to accept!"
             })
 
+        # TODO: match accept time check
         m.accept(g.user)
-        accepted = len(m.getMatch().getAccepted())
+        accepted = len(m.getAccepted())
 
-        # LOL HARDCODED
-        if accepted == 10:
+        # If we're G2G
+        if accepted == m.size:
             m.state = MatchState.MATCH_STATE_SETUP
             m.server.setup()
             m.save()
@@ -422,7 +423,8 @@ def api_lobby_action():
         lobby.sendAction({
             "type": "accept",
             "num": accepted,
-            "id": m.id
+            "id": m.id,
+            "size": m.size
         })
         return jsonify({"success": True})
 

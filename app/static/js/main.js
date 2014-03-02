@@ -243,11 +243,11 @@ var pug = {
                 break;
             case "accept":
                 $("#lobby-accepted").text(data.num);
-                if (data.num == 10) {
+                if (data.num == data.size) {
                     // Delayed so we can show fancy animations for accepted!
                     setTimeout(function () {
                         window.location = "/match/"+data.id;
-                    }, 3000);
+                    }, 1500);
                     pug.lobbyAddAction("Match Found, number "+data.id+"!", "success");
                     $("#lobby-info-main-accepting").fadeOut();
                     new Audio(SOUNDS.accept).play()

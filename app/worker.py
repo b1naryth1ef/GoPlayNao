@@ -122,7 +122,7 @@ def task_stats_cache():
         data['current']['lobbies']['playing'] += 1
 
     for server in Server.select().where((Server.mode == ServerType.SERVER_MATCH) & Server.active == True):
-        if Match.select.where((Match.server == server) &
+        if Match.select().where((Match.server == server) &
                 (Match.state != MatchState.MATCH_STATE_FINISH)):
             data['current']['servers']['used'] += 1
             data['current']['matches'] += 1
@@ -135,58 +135,7 @@ def task_stats_cache():
 
 
 class MatchFinder(object):
-    def run(self):
-        pass
-
-    # def limit_maps(self, configs):
-    #     """
-    #     Takes a list of lobby configs, and returns a dictionary of map names
-    #     to rankings. This filters out all maps that are not acceptable
-    #     """
-    #     maps, maps_lim = {}, {}
-
-    #     map_configs = map(lambda i: i["maps"], configs)
-    #     for mapli in map_configs:
-    #         for m, r in mapli.items():
-    #             if m in maps:
-    #                 maps[m] += r
-    #             else:
-    #                 maps[m] = r
-
-    #     acceptable_maps = filter(lambda a: a[1][0] == len(map_configs), maps.items())
-    #     return dict(map(lambda a: (a[0], a[1][1]), acceptable_maps))
-
-    #     return dict()
-
-    # def choose_map(self, maps):
-    #     """
-    #     This function takes in a list of lobby configurations and returns
-    #     a single map that is the best choice based on these. This works on
-    #     a simple additivie-ranking method which takes the highest ranked match,
-    #     or a random choice of the highest ranked matches.
-    #     """
-    #     maps = {}
-
-    #     for cfg in configs:
-    #         for mp in cfg.get("maps", []):
-    #             name, rank = mp['name'], mp['rank']
-    #             if name not in maps:
-    #                 maps[name] = rank
-    #                 continue
-    #             maps[name] += rank
-
-    #     results = sorted(maps.items(), key=lambda a: -a[1])
-
-    #     # Check if we have multiple matches
-    #     if results[0][1] != results[1][1]:
-    #         return results[0][0]
-
-    #     # We have a few canidates, choose a random one
-    #     pool = []
-    #     for result in results:
-    #         if result[1] == results[0][1]:
-    #             pool.append(result[0])
-    #     return random.choice(pool)
+    SIZE = 2
 
     def get_shared(self, *args):
         """
@@ -194,15 +143,10 @@ class MatchFinder(object):
 
         TOOD: maybe this could suck less?
         """
-        maps = set(args[0])
-        for mmap in maps:
-            for arg in args:
-                if mmap not in arg:
-                    maps.remove(mmap)
-        return maps
+        return reduce(lambda x, y: x & y, map(set, args))
 
     def all_comb(self, obj):
-        for index in xrange(0, len(obj)):
+        for index in xrange(1, len(obj)+1):
             for comb in itertools.combinations(obj, index):
                 yield comb
 
@@ -210,15 +154,18 @@ class MatchFinder(object):
         for comb in self.all_comb(lobbies):
             teama, teamb = [], []
             for entry in comb:
-                if len(teama) < 5:
+                if len(teama) < (self.SIZE / 2):
                     teama.append(entry)
                 else:
                     teamb.append(entry)
 
-            skilla = sum(map(lambda z: z.getSkillDifference(), teama))
-            skillb = sum(map(lambda z: z.getSkillDifference(), teamb))
+            if not len(teama) or not len(teamb):
+                continue
 
-            if abs(skilla - skillb) >= max_skill:
+            skilla = 0 # sum(map(lambda z: z.getSkillDifference(), teama))
+            skillb = 0 # sum(map(lambda z: z.getSkillDifference(), teamb))
+
+            if abs(skilla - skillb) <= max_skill:
                 return teama, teamb
 
         return None, None
@@ -234,9 +181,10 @@ class MatchFinder(object):
             if not self.get_shared(l.config['maps'], item.config['maps']):
                 print "Could not find shared maps between %s and %s" % (l.id, item.id)
                 break
-            if l.region != item.region:
-                print "Region does not match between %s and %s" % (l.id, item.id)
-                break
+            # We don't have a concept of regions yet, add this in when we do
+            # if l.region != item.region:
+            #     print "Region does not match between %s and %s" % (l.id, item.id)
+            #     break
             valid_lobbies.append(item)
 
         if not len(valid_lobbies):
@@ -246,7 +194,8 @@ class MatchFinder(object):
         # Generate ALL possible 5v5 matches
         for comb in self.all_comb(valid_lobbies):
             # Matches have 10 players y0 dawg
-            if reduce(lambda i: len(i.getMembers()), comb) == 10:
+            if not comb: continue
+            if sum([len(i.getMembers()) for i in comb]) == self.SIZE:
                 possible_matches.append(comb)
 
         # If we don't have any break out
@@ -255,16 +204,33 @@ class MatchFinder(object):
             return None, None
 
         # Sort the list by queued time, results in older first
-        possible_matches.sort(key=lambda i: i.queuedat)
+        possible_matches.sort(key=lambda i: min([x.queuedat for x in i]))
         for match in possible_matches:
+            print "  Attempting to match..."
             # We'll have a hodge podge of maps in this result, limit matches
             #  that do not actually share maps together
-            maps = self.get_shared(match)
+            maps = self.get_shared(*[lob.config['maps'] for lob in match])
             if not maps:
+                print "  No shared maps for match"
                 continue
 
+            # It's possible someone has blocked someone else...
+            blocks, players = [], []
+            for lobby in match:
+                for member in lobby.getMembers():
+                    players.append(member)
+                    blocks += User.select().where(User.id == member).get().blocked
+
+            # Grab a inclusive set of blocks + players
+            if len(set(blocks) & set(players)):
+                print "  Users have blocked eachother, match will not work!"
+                continue
+
+            # Attempt to build two teams that are decently even
             a_team, b_team = self.get_teams(match, MAX_SKILL_DIFF)
+            print a_team, b_team
             if not a_team or not b_team:
+                print "  Could not get_teams on %s" % (match,)
                 continue
 
             return maps, (a_team, b_team)
@@ -285,10 +251,30 @@ class MatchFinder(object):
                 if lobby.state != LobbyState.LOBBY_STATE_SEARCH: continue
 
                 maps, teams = self.find_match(lobby)
-                if not maps:
+                if not teams:
                     continue
 
-                for lobby in (x+y):
+                if not maps:
+                    # TODO: send msg to lobby
+                    print "Match found but no maps in common!"
+                    continue
+
+                servers = Server.getFreeServer()
+                if not len(servers):
+                    # TODO: send msg to lobby
+                    print "No free server found!"
+                    continue
+
+                m = Match()
+                m.lobbies = map(lambda i: i.id, teams[0]+teams[1])
+                m.config = {"map": random.choice(list(maps))}
+                m.server = servers[0]
+                m.state = MatchState.MATCH_STATE_PRE
+                m.size = self.SIZE
+                m.save()
+                m.cleanup()
+
+                for lobby in (teams[0]+teams[1]):
                     lobby.sendAction({"type": "match"})
 
 FINDER = MatchFinder()
@@ -302,7 +288,7 @@ def schedule(**kwargs):
 def run():
     thread.start_new_thread(FINDER.loop, ())
     # Run once on startup
-    thread.start_new_thread(task_load_workshop_maps, ())
+    #thread.start_new_thread(task_load_workshop_maps, ())
     while True:
         time.sleep(1)
         for name, timeframe in schedules.items():
