@@ -33,6 +33,7 @@ def task_user_timeout():
 
 @schedule(seconds=5)
 def task_lobby_timeout():
+    return
     """
     If a user times out from a lobby, time them out
     """
@@ -238,44 +239,58 @@ class MatchFinder(object):
         print "No matches found for %s" % l.id
         return None, None
 
+    def matchmake(self, data):
+        try:
+            lobby = Lobby.select().where(Lobby.id == data['id']).get()
+        except Lobby.DoesNotExist: return
+
+        if lobby.state != LobbyState.LOBBY_STATE_SEARCH: return
+
+        maps, teams = self.find_match(lobby)
+        if not teams:
+            return
+
+        if not maps:
+            # TODO: send msg to lobby
+            print "Match found but no maps in common!"
+            return
+
+        servers = Server.getFreeServer()
+        if not len(servers):
+            # TODO: send msg to lobby
+            print "No free server found!"
+            return
+
+        m = Match()
+        m.lobbies = map(lambda i: i.id, teams[0]+teams[1])
+        m.config = {"map": random.choice(list(maps))}
+        m.server = servers[0]
+        m.state = MatchState.MATCH_STATE_PRE
+        m.size = self.SIZE
+        m.save()
+        m.cleanup()
+
+        for lobby in (teams[0]+teams[1]):
+            print lobby.id
+            lobby.sendAction({"type": "match"})
+
+        thread.start_new_thread(self.matchtimer, (m, ))
+
+    def matchtimer(self, match):
+        time.sleep(11)
+        for lobby in match.getLobbies():
+            if lobby.state == LobbyState.LOBBY_STATE_SEARCH:
+                lobby.sendAction({"type": "endmatch"})
+
     def loop(self):
         ps = redis.pubsub()
         ps.subscribe("lobby-queue")
 
         for item in ps.listen():
             if item['type'] == "message":
-                try:
-                    lobby = Lobby.select().where(Lobby.id == item['data']).get()
-                except Lobby.DoesNotExist: continue
-
-                if lobby.state != LobbyState.LOBBY_STATE_SEARCH: continue
-
-                maps, teams = self.find_match(lobby)
-                if not teams:
-                    continue
-
-                if not maps:
-                    # TODO: send msg to lobby
-                    print "Match found but no maps in common!"
-                    continue
-
-                servers = Server.getFreeServer()
-                if not len(servers):
-                    # TODO: send msg to lobby
-                    print "No free server found!"
-                    continue
-
-                m = Match()
-                m.lobbies = map(lambda i: i.id, teams[0]+teams[1])
-                m.config = {"map": random.choice(list(maps))}
-                m.server = servers[0]
-                m.state = MatchState.MATCH_STATE_PRE
-                m.size = self.SIZE
-                m.save()
-                m.cleanup()
-
-                for lobby in (teams[0]+teams[1]):
-                    lobby.sendAction({"type": "match"})
+                data = json.loads(item['data'])
+                if data['tag'] == "match":
+                    self.matchmake(data)
 
 FINDER = MatchFinder()
 
@@ -288,7 +303,7 @@ def schedule(**kwargs):
 def run():
     thread.start_new_thread(FINDER.loop, ())
     # Run once on startup
-    #thread.start_new_thread(task_load_workshop_maps, ())
+    # thread.start_new_thread(task_load_workshop_maps, ())
     while True:
         time.sleep(1)
         for name, timeframe in schedules.items():

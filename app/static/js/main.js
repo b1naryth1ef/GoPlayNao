@@ -215,6 +215,7 @@ var pug = {
     },
 
     lobbyHandleMsg: function (data) {
+        console.log(data)
         switch(data.type) {
             case "chat":
                 pug.lobbyAddChat(data.from, data.msg)
@@ -240,9 +241,17 @@ var pug = {
                 break;
             case "match":
                 $("#lobby-info-main-accepting").show();
+                $("#lobby-info-main-queued").hide();
+                $("#lobby-accept-timer").countdown(function (){}, 10, "s");
+                break;
+            case "endmatch":
+                $("#lobby-info-main-accepting").hide();
+                $("#lobby-info-main-queued").show();
                 break;
             case "accept":
-                $("#lobby-accepted").text(data.num);
+                $("#lobby-accept-info").show();
+                $("#lobby-accept-accepted").text(data.num);
+                $("#lobby-accept-size").text(data.size);
                 if (data.num == data.size) {
                     // Delayed so we can show fancy animations for accepted!
                     setTimeout(function () {
@@ -437,7 +446,7 @@ var pug = {
             })
         }
 
-        $("#lobby-accept").click(function () {
+        $("#lobby-accept-btn").click(function () {
             $.ajax("/api/lobby/action", {
                 type: "POST",
                 data: {
@@ -448,6 +457,7 @@ var pug = {
                     if (!data.success) {
                         alert(data.msg)
                     }
+                    $("#lobby-accept-btn").hide();
                 }
             })
         })

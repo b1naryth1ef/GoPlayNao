@@ -416,16 +416,19 @@ def api_lobby_action():
 
         # If we're G2G
         if accepted == m.size:
+            lobby.state = LobbyState.LOBBY_STATE_PLAY
+            lobby.save()
             m.state = MatchState.MATCH_STATE_SETUP
             m.server.setup()
             m.save()
 
-        lobby.sendAction({
-            "type": "accept",
-            "num": accepted,
-            "id": m.id,
-            "size": m.size
-        })
+        for lob in m.getLobbies():
+            lob.sendAction({
+                "type": "accept",
+                "num": accepted,
+                "id": m.id,
+                "size": m.size
+            })
         return jsonify({"success": True})
 
     if args.action == "quit":

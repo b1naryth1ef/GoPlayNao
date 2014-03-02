@@ -314,7 +314,10 @@ class Lobby(BaseModel):
             "state": self.state,
             "msg": "Queue started"
         })
-        redis.publish("lobby-queue", self.id)
+        redis.publish("lobby-queue", json.dumps({
+            "tag": "match",
+            "id": self.id
+        }))
 
     def stopQueue(self):
         if self.state == LobbyState.LOBBY_STATE_IDLE: return
@@ -547,6 +550,10 @@ class Match(BaseModel):
     state = IntegerField(default=MatchState.MATCH_STATE_PRE)
     size = IntegerField(default=10)
     created = DateTimeField(default=datetime.utcnow)
+
+    def getLobbies(self):
+        for lob in self.lobbies:
+            yield Lobby.select().where(Lobby.id == lob).get()
 
     def cleanup(self):
         redis.delete("match:%s:accepted" % self.id)
