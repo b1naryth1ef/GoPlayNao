@@ -641,4 +641,5 @@ if __name__ == "__main__":
     s.active = True
     s.save()
 
+    print "Server: %s | %s" % (s.id, s.hash
     print "Test User: %s" % u.id
