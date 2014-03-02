@@ -200,7 +200,7 @@ class Server(BaseModel):
             "pid": 2,
             "match": match.id,
             "map": match.config['map'],
-            "players": "|".join(match.getPlayers())
+            "players": "|".join([i.steamid for i in match.getPlayers()])
         }))
 
 
@@ -572,9 +572,9 @@ class Match(BaseModel):
         redis.sadd("match:%s:accepted" % self.id, u.id)
 
     def getPlayers(self):
-        for lobby in self.lobbies:
+        for lobby in self.getLobbies():
             for player in lobby.getMembers():
-                yield User.select().where(User.id == player)
+                yield User.select().where(User.id == player).get()
 
     def setDefaultConfig(self):
         self.config = {

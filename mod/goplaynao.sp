@@ -173,14 +173,14 @@ public LogLine(const String:data[]) {
 }
 
 // Handles client connections
-public bool:OnClientConnect(client, String:msg[], maxlen) {
-        decl String:buffer[32];
-        Format(buffer, sizeof(buffer), "%d", GetSteamAccountID(client));
-        if (StrContains(PLAYERS, buffer) <= 0) {
-            strcopy(msg, maxlen, "You are not in this matchmaking session!");
-            return false;
-        }
-        return true;
+public bool:OnClientConnect(client, String:msg[], maxlen) {    
+    decl String:buffer[32];
+    Format(buffer, sizeof(buffer), "%d", GetSteamAccountID(client));
+    if (StrContains(PLAYERS, buffer) <= 0) {
+        strcopy(msg, maxlen, "You are not in this matchmaking session!");
+        return false;
+    }
+    return true;
 }
 
 public Action:Event_PlayerConnect(Handle:event, const String:name[], bool:dontBroadcast) {

@@ -9,7 +9,8 @@ class Connection(object):
         self.addr = addr
 
     def push(self, obj):
-        self.conn.sendall(json.dumps(obj) + '\n')
+        print "Pushing `%s`" % obj
+        self.conn.sendall(json.dumps(obj))
 
     def getPacket(self, id):
         if hasattr(self, "packet_%s" % id):
@@ -21,7 +22,8 @@ class Connection(object):
         ps.subscribe("server:%s" % self.server.id)
         for item in ps.listen():
             if item['type'] == 'message':
-                self.conn.sendall(item['data'] + '\n')
+                print "Pushing from redis loop `%s`" % item['data']
+                self.conn.sendall(item['data'])
 
     def handle(self):
         while True:
