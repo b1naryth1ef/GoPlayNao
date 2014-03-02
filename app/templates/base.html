@@ -3,7 +3,7 @@
 <head> 
     <meta charset="utf-8"> 
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0"/> 
-    <title>NS2Pug</title> 
+    <title>GoPlayMM</title> 
 
     <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css"/> 
     <!--[if lt IE 9]><link rel="stylesheet" type="text/css" href="/static/plugins/jquery-ui/jquery.ui.1.10.2.ie.css"/><![endif]--> 
@@ -114,11 +114,11 @@
                     <ul id="search-results" class="notifications"></ul>
                 </div>
                 <ul id="nav"> 
-                    <li class="current">
+                    <li {% if request.path == "/" %}  class="current" {% endif %}>
                         <a href="/">
                         <i class="icon-dashboard"></i>Homepage</a>
                     </li>
-                    <li><a href="/about"><i class="icon-book"></i>About</a></li>
+                    <li {% if request.path.startswith("/about") %}  class="current" {% endif %}><a href="/about"><i class="icon-book"></i>About</a></li>
                     {% if g.user %}
                         <!--<li><a href="/lobby"><i class="icon-group"></i>Create Lobby</a></li>-->
                        <!--  <li><a href="/friends"><i class="icon-smile"></i>Friends <span class="label label-info pull-right">6</span></a></li> -->
@@ -128,7 +128,7 @@
                     {% else %}
                         <li><a href="#"><i class="icon-group"></i>Recent Matches</a></li>
                     {% endif %}
-                    <li><a href="/bans"><i class="icon-remove"></i>Banlist</a></li>
+                    <li {% if request.path.startswith("/bans") %}  class="current" {% endif %}><a href="/bans"><i class="icon-remove"></i>Banlist</a></li>
                 </ul>
                 <div class="sidebar-title"> 
                     <span>Notifications</span> 
