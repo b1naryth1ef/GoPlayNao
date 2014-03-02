@@ -419,7 +419,7 @@ def api_lobby_action():
             lobby.state = LobbyState.LOBBY_STATE_PLAY
             lobby.save()
             m.state = MatchState.MATCH_STATE_SETUP
-            m.server.setup()
+            m.server.setup(m)
             m.save()
 
         for lob in m.getLobbies():
@@ -490,14 +490,14 @@ def api_lobby_action():
             lobby.startQueue()
             return jsonify({"success": True})
         else:
-            return jsonify({"success": False, "msg": "Lobby Already Queued"})
+            return jsonify({"success": False, "msg": "Lobby cannot be queued!"})
 
     if args.action == "stop":
         if lobby.state in [LobbyState.LOBBY_STATE_SEARCH]:
             lobby.stopQueue()
             return jsonify({"success": True})
         else:
-            return jsonify({"success": False, "msg": "Lobby Not Queued!"})
+            return jsonify({"success": False, "msg": "Lobby not queued!"})
 
 @api.route("/lobby/invite", methods=['POST'])
 @authed()

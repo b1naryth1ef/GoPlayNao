@@ -195,7 +195,14 @@ class Server(BaseModel):
             free.append(server)
         return free
 
-    def setup(self): pass
+    def setup(self, match):
+        redis.publish("server:%s" % self.id, json.dumps({
+            "pid": 2,
+            "match": match.id,
+            "map": match.config['map'],
+            "players": "|".join(match.getPlayers())
+        }))
+
 
     def findWaitingMatch(self):
         return Match.select().where((Match.server == self) & state == MatchState.MATCH_STATE_PRE).get()

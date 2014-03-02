@@ -39,7 +39,7 @@ public OnPluginStart() {
     gp_serverhash = CreateConVar("gp_serverhash", "1", "This servers hash");
 
     // Hook events
-    HookEvent("player_connect", Event_PlayerConnect, EventHookMode_Post);
+    // HookEvent("player_connect", Event_PlayerConnect, EventHookMode_Post);
 
     HookEvent("player_death", Event_PlayerDeath, EventHookMode_Post);
     HookEvent("player_hurt", Event_PlayerHurt, EventHookMode_Post);
@@ -96,26 +96,28 @@ public OnSocketReceive(Handle:s, String:recv[], const dataSize, any:arg) {
 
     new bool:success = false;
     if (json_get_cell(data, "success", success) && !success) {
-        return LogError("Recieved error response!");
+        decl String:error[2048];
+        json_get_string(data, "msg", error, sizeof(error));
+        return LogError("Recieved error response '%s'!", error);
     }
 
     new id = -1;
-    json_get_cell(data, "id", id);
+    json_get_cell(data, "pid", id);
     switch (id) {
-        case 1: {
-            HandlePacketOne(data);
+        case 2: {
+            HandlePacketTwo(data);
         }
     }
 
     return Plugin_Handled;
 }
 
-public HandlePacketOne(JSON:data) {
+public HandlePacketTwo(JSON:data) {
     decl String:map_name[128];
     json_get_string(data, "map", map_name, sizeof(map_name));
 
     // Set the match_id
-    json_get_cell(data, "id", MATCH_ID);
+    json_get_cell(data, "match", MATCH_ID);
     LogMessage("Setting up match #%i", MATCH_ID);
 
     json_get_string(data, "players", PLAYERS, sizeof(PLAYERS));
@@ -123,6 +125,7 @@ public HandlePacketOne(JSON:data) {
     LogMessage("Changing level to %s", map_name);
     ForceChangeLevel(map_name, "New Match");
 }
+
 
 // TOOD: handle this situation better
 public OnSocketDisconnected(Handle:s, any:arg) {
@@ -169,69 +172,36 @@ public LogLine(const String:data[]) {
     WriteFileLine(file, buffer);
 }
 
-public Action:Event_PlayerConnect(Handle:event, const String:name[], bool:dontBroadcast) {
-    decl String:networkid[128];
-    GetEventString(event, "networkid", networkid, sizeof(networkid));
+// Handles client connections
+public bool:OnClientConnect(client, String:msg[], maxlen) {
+        decl String:buffer[32];
+        Format(buffer, sizeof(buffer), "%d", GetSteamAccountID(client));
+        if (StrContains(PLAYERS, buffer) <= 0) {
+            strcopy(msg, maxlen, "You are not in this matchmaking session!");
+            return false;
+        }
+        return true;
+}
 
+public Action:Event_PlayerConnect(Handle:event, const String:name[], bool:dontBroadcast) {
     // Ignore bots
     if (!GetEventBool(event, "bot")) {
         // Log the player connet message
+        decl String:networkid[128];
         decl String:addr[128];
         decl String:buffer[2048];
+        GetEventString(event, "networkid", networkid, sizeof(networkid));
         GetEventString(event, "address", addr, sizeof(addr));
         Format(buffer, sizeof(buffer), "PlayerConnect,%d,%s,%s",
             GetEventInt(event, "userid"),
             addr,
             networkid);
         LogLine(buffer);
-
-        // Kick the player if they shouldn't be joining (tsk tsk tsk!)
-        decl String:sid[64];
-        GetCommunityIDString(networkid, sid, sizeof(sid));
-        if (StrContains(PLAYERS, sid) <= 0) {
-            LogMessage("Would kick player %s", GetEventInt(event, "userid"));
-            // CreateTimer(2, KickWhileConnecting, GetEventInt(event, "userid"));
-            // KickWhileConnecting(INVALID_HANDLE, );
-        }
     }
     return Plugin_Continue;
 }
 
-public Action:KickWhileConnecting(Handle:timer, any:client) {
-    if (!IsClientConnected(client)) {
-        CreateTimer(2, KickWhileConnecting, client);
-    } else {
-        KickClient(client, "You are not part of this match!");
-    }
-}
-
-// -- Libray Like Functions --
-stock bool:GetCommunityIDString(const String:SteamID[], String:CommunityID[], const CommunityIDSize) 
-{ 
-    decl String:SteamIDParts[3][11]; 
-    new const String:Identifier[] = "76561197960265728"; 
-     
-    if ((CommunityIDSize < 1) || (ExplodeString(SteamID, ":", SteamIDParts, sizeof(SteamIDParts), sizeof(SteamIDParts[])) != 3)) 
-    { 
-        CommunityID[0] = '\0'; 
-        return false; 
-    } 
-
-    new Current, CarryOver = (SteamIDParts[1][0] == '1'); 
-    for (new i = (CommunityIDSize - 2), j = (strlen(SteamIDParts[2]) - 1), k = (strlen(Identifier) - 1); i >= 0; i--, j--, k--) 
-    { 
-        Current = (j >= 0 ? (2 * (SteamIDParts[2][j] - '0')) : 0) + CarryOver + (k >= 0 ? ((Identifier[k] - '0') * 1) : 0); 
-        CarryOver = Current / 10; 
-        CommunityID[i] = (Current % 10) + '0'; 
-    } 
-
-    CommunityID[CommunityIDSize - 1] = '\0'; 
-    return true; 
-}
-
-
 // -- Begin game log code --
-
 public Action:Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast) {
     decl String:buffer[2048];
     decl String:weapon[64];

@@ -9,12 +9,19 @@ class Connection(object):
         self.addr = addr
 
     def push(self, obj):
-        self.conn.sendall(json.dumps(obj))
+        self.conn.sendall(json.dumps(obj) + '\n')
 
     def getPacket(self, id):
         if hasattr(self, "packet_%s" % id):
             return getattr(self, "packet_%s" % id)
         return None
+
+    def redis_loop(self):
+        ps = redis.pubsub()
+        ps.subscribe("server:%s" % self.server.id)
+        for item in ps.listen():
+            if item['type'] == 'message':
+                self.conn.sendall(item['data'] + '\n')
 
     def handle(self):
         while True:
@@ -49,20 +56,16 @@ class Connection(object):
         version = int(data.get("version", 0))
         if PLUGIN_VERSION != version:
             msg = "Invalid Plugin Version, server has %s, master has %" (version, PLUGIN_VERSION)
-            return {"success": False, "msg": msg}
+            return {"success": False, "msg": msg, "pid": 1}
 
         self.server = s
+        thread.start_new_thread(redis_loop)
 
-        if data.get("mid", -1) != -1:
-            # TODO: grab existing match
-            pass
+        # if data.get("mid", -1) != -1:
+        #     # TODO: grab existing match
+        #     pass
 
-        try:
-            m = self.server.findWaitingMatch()
-        except:
-            return {"success": True, "has_match": False, "match": {}}
-
-        return {"success": True, "has_match": True, "match": m.format(forServer=True)}
+        return {"success": True, "pid": 1}
 
 class SServer(object):
     def __init__(self, host="", port=5595):
