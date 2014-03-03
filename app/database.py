@@ -3,13 +3,13 @@ from playhouse.postgres_ext import *
 from datetime import *
 from dateutil.relativedelta import relativedelta
 from flask import request
-from steam import getSteamAPI
+from steam import SteamAPI
 from util import human_readable
 import bcrypt, json, redis, random, string, time
 
 db = PostgresqlExtDatabase('ns2pug', user="b1n", password="b1n", threadlocals=True)
 redis = redis.Redis()
-steam = getSteamAPI()
+steam = SteamAPI.new()
 
 attrs = ['years', 'months', 'days', 'hours', 'minutes', 'seconds']
 
@@ -38,8 +38,9 @@ class User(BaseModel):
     # Gameplay
     rank = IntegerField(default=0)
 
-    def isBanned(self):
-        return Ban.getActiveBanQuery((Ban.user == self.id) | (Ban.steamid == self.steamid)).count()
+    def getActiveBans(self):
+        return Ban.select().where(Ban.getActiveBanQuery() &
+                    ((Ban.user == self.id) | (Ban.steamid == self.steamid))).order_by(Ban.end)
 
     def isOnline(self):
         value = redis.get("user:%s:ping" % self.id) or 0
@@ -137,8 +138,11 @@ class Ban(BaseModel):
     # match = ForeignKeyField(Match, null=True)
 
     @classmethod
-    def getActiveBanQuery(cls, ref):
-        return Ban.select().where((Ban.active == True) & (Ban.end < datetime.utcnow()) & ref)
+    def getActiveBanQuery(cls, ref=()):
+        return (Ban.active == True) & ((Ban.end >> None) | (Ban.end < datetime.utcnow()))
+
+    def getDurationString(self):
+        return human_readable(self.end-self.start) if self.end and self.start else "forever"
 
     def format(self):
         return {
@@ -150,8 +154,7 @@ class Ban(BaseModel):
             "end": int(self.end.strftime("%s")) if self.end else "",
             "reason": self.reason,
             "source": self.source,
-            "duration": human_readable(self.end-self.start)
-                if self.end and self.start else "forever"
+            "duration": self.getDurationString()
         }
 
     def log(self, action=None, user=None, server=None):
@@ -563,6 +566,7 @@ class Match(BaseModel):
     mtype = IntegerField(default=MatchType.MATCH_TYPE_LOBBY)
     state = IntegerField(default=MatchState.MATCH_STATE_PRE)
     size = IntegerField(default=10)
+    level = IntegerField(default=0)
     created = DateTimeField(default=datetime.utcnow)
 
     def getLobbies(self):

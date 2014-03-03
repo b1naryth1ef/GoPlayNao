@@ -31,7 +31,7 @@ var JST = {
                         '<span class="message"><strong><%= u.username %></strong></span>'+
                         '<span class="time">32 Pugs Played</span></div></a> </li>'),
 
-    ban_row: _.template('<tr><td><%= ban.id %></td>'+
+    ban_row: _.template('<tr class="ban-row"><td><%= ban.id %></td>'+
         '<td><a href="<%= url %>"><%= ban.user.username %></a></td>'+
         '<td><%= ban.reason %></td><td><%= ban.duration %></td></tr>')
 
@@ -653,23 +653,84 @@ var pug = {
         });
     },
 
-    // Bans view
-    bans: function() {
+    // Handles rendering the list of bans, and related pagination
+    bansRender: function () {
+        // Enable or disable back button based on page #
+        if (pug.bans_page_num == 1) {
+            $("#bans-page-prev").parent().addClass("disabled");
+        } else {
+            $("#bans-page-prev").parent().removeClass("disabled");
+        }
+
+        // Ajax call to the bans api
         $.ajax("/api/bans/list", {
             data: {
-                page: this.bans_page_num
+                page: pug.bans_page_num
             },
             success: function(data) {
+                // Remove old pagination
+                $(".bans-page").remove();
+
+                // Enable or disable forward button based on page number
+                if (pug.bans_page_num == (data.total / 100)) {
+                    console.log("DISABLED")
+                    $("#bans-page-next").parent().addClass("disabled");
+                } else {
+                    console.log("ENABLED")
+                    $("#bans-page-next").parent().removeClass("disabled");
+                }
+
+                // Render pagination
+                _.each(_.range(1, (data.total / 100)+1), function(i) {
+                    var active = (i == pug.bans_page_num) ? "active" : ""
+                    $("#bans-page-before").before(
+                        '<li class="'+active+'"><a id="'+i
+                        +'" class="bans-page" href="">'+i+'</a></li>')
+                });
+
+                // Remove old ban rows
+                $(".ban-row").remove();
+
+                // Render ban rows
                 _.each(data.bans, function (ban) {
                     if (ban.steamid) {
                         url = "steamcommunity.com/profiles/"+ban.steamid
                     } else {
                         url = "/u/"+ban.user.id
                     }
-                    $(".bans-list").html(JST.ban_row({ban: ban, url:url}))
+                    $(".bans-list").append(JST.ban_row({ban: ban, url:url}))
                 })
             }
         })
+    },
+
+    // Called once on page load, handles binding events and loading the inital
+    //  bans list.
+    bans: function() {        
+        $("#ban-pagination").delegate(".bans-page", "click", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            pug.bans_page_num = $(this).attr("id");
+            pug.bansRender();
+        })
+
+        $("#bans-page-prev").click(function (e) {
+            e.preventDefault();
+            // If we're disabled, don't do shit
+            if ($(this).parent().hasClass("disabled")) { return; }
+            pug.bans_page_num--
+            pug.bansRender();
+        })
+
+        $("#bans-page-next").click(function (e) {
+            e.preventDefault();
+            // If we're disabled, don't do shit
+            if ($(this).parent().hasClass("disabled")) { return; }
+            pug.bans_page_num++
+            pug.bansRender();
+        })
+
+        pug.bansRender();
     },
 
     // Profile view

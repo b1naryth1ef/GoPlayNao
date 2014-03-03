@@ -8,7 +8,7 @@ public = Blueprint('public', __name__)
 def public_index():
     return render_template("index.html")
 
-@public.route("/lobby/<id>")
+@public.route("/lobby/<int:id>")
 @public.route("/lobby")
 @authed()
 def public_lobby(id=None):
@@ -61,3 +61,18 @@ def public_bans():
 @public.route("/about")
 def public_about():
     return render_template("about.html")
+
+@public.route("/matches")
+def public_matches(): pass
+
+@public.route("/match/<int:id>")
+def public_match(id):
+    try:
+        match = Match.get(Match.id == id)
+    except Match.DoesNotExist:
+        return flashy("That match does not exist!")
+
+    if match.level > g.user.level:
+        return flashy("You do not have permission to view that!")
+
+    return render_template("match.html", match=id)

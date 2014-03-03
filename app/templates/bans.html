@@ -10,9 +10,6 @@
     <div class="row" id="friends-main">
         <div class="col-md-12">
             <div class="widget box">
-                <div class="widget-header">
-                    <h4>Last 50 Bans</h4>
-                </div>
                 <div class="widget-content">
                     <table class="table table-hover">
                         <thead>
@@ -25,6 +22,17 @@
                         </thead>
                         <tbody class="bans-list"></tbody> 
                     </table>
+                    <div class="row">
+                        <div class="table-footer">
+                            <div class="col-md-6"></div>
+                            <div class="col-md-6">
+                                <ul class="pagination" id="ban-pagination">
+                                    <li><a href="#" id="bans-page-prev">← Prev</a></li>
+                                    <li id="bans-page-before"><a href="#" id="bans-page-next">Next →</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,5 +1,5 @@
 import time, random, thread, json
-from steam import getSteamAPI
+from steam import SteamAPI
 from database import *
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
@@ -7,7 +7,7 @@ import itertools
 
 schedules = {}
 
-s = getSteamAPI()
+s = SteamAPI.new()
 
 def schedule(**kwargs):
     def deco(f):

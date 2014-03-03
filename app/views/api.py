@@ -114,9 +114,11 @@ def api_bans_list():
     }
 
     if args.after:
-        q = Ban.select().where(Ban.id > args.after).order_by(Ban.id).limit(25)
+        q = Ban.select().where(Ban.getActiveBanQuery()
+                & (Ban.id > args.after)).order_by(Ban.id).limit(100)
     elif args.page:
-        q = Ban.select().order_by(Ban.id).paginate(args.page or 1, 25)
+        q = Ban.select().where(Ban.getActiveBanQuery()).order_by(
+                Ban.id).paginate(args.page or 1, 100)
     else:
         data['success'] = False
         data['msg'] = "Need either page or after for /bans/list"
@@ -124,6 +126,7 @@ def api_bans_list():
 
     data['bans'] = [i.format() for i in q]
     data['size'] = len(data['bans'])
+    data['total'] = Ban.select().where(Ban.getActiveBanQuery()).count()
 
     return jsonify(data)
 
@@ -712,7 +715,7 @@ def api_users_friends():
 
     for entry in q:
         user = entry.getNot(g.user)
-        if user.isBanned():
+        if user.getActiveBans().count():
             data['banned'].append(user.format())
         elif user.isOnline():
             data['online'].append(user.format())

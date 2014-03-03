@@ -38,6 +38,10 @@ class SteamAPI(object):
     def __init__(self, key):
         self.key = key
 
+    @classmethod
+    def new(cls):
+        return cls(STEAM_KEY)
+
     def request(self, url, data, verb="GET"):
         url = "http://api.steampowered.com/%s" % url
         data['key'] = self.key
@@ -110,5 +114,4 @@ class SteamAPI(object):
                 wc.files.append(self.getWorkshopFile(id))
             return wc
 
-def getSteamAPI():
-    return SteamAPI(STEAM_KEY)
+

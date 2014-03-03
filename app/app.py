@@ -4,8 +4,8 @@ from flask.ext.openid import OpenID
 from flask.ext.socketio import SocketIO
 
 # Util
-from steam import getSteamAPI
-from database import User, redis, Session, Lobby
+from steam import SteamAPI
+from database import User, redis, Session
 from util import flashy, limit
 
 # Internal
@@ -22,7 +22,7 @@ app.secret_key = "change_me"
 socketio = SocketIO(app)
 oid = OpenID(app)
 
-steam = getSteamAPI()
+steam = SteamAPI.new()
 
 app.register_blueprint(public)
 app.register_blueprint(api)
@@ -54,17 +54,6 @@ def test(id):
     resp.set_cookie("sid", g.user.login(), expires=time.time() + Session.LIFETIME)
     return resp
 
-@app.route("/join/<id>")
-def jointest(id):
-    l = Lobby.select().where(Lobby.id == id).get()
-    l.members.append(g.user.id)
-    l.save()
-    l.sendAction({
-        "type": "join",
-        "member": g.user.format()
-    })
-    return flashy("Yay!", "success")
-
 @oid.after_login
 def create_or_login(resp):
     match = steam.steam_id_re.search(resp.identity_url)
@@ -72,6 +61,8 @@ def create_or_login(resp):
         g.user = User.steamGetOrCreate(match.group(1))
     except Exception as e:
         return flashy("That user cannot join: %s" % e)
+    if g.user.getActiveBans().count():
+        return flashy("You are banned!", "error")
     resp = flashy("Welcome back %s!" % g.user.username, "success")
     resp.set_cookie("sid", g.user.login(), expires=time.time() + Session.LIFETIME)
     return resp
@@ -97,7 +88,9 @@ def beforeRequest():
 def socket_loop(data):
     s, user = data
     ps = redis.pubsub()
-    ps.subscribe(["global", "user:%s:push" % user.id])
+    chans = ["global"]
+    if user: chans.append("user:%s:push" % user.id)
+    ps.subscribe(chans)
     for item in ps.listen():
         if item['type'] == 'message':
             data = json.loads(item['data'])
@@ -110,16 +103,12 @@ def socket_loop(data):
 @socketio.on('connect', namespace="/api/poll")
 def socket_connect():
     """
-    This has some fucking magical ass shit in it. Lets explain.
-
     Flask has this awesome little thing called the request context, which
     is the reason things like "request" and "g" work the way they do. Sure,
     it's a ton of magic, but it's usefull. Unless you use websockets and need
-    an ongoing loop. This function HAS to exit for socketio too parse NEW
-    emissions from the client, so we start a greenlet joined too the socket
-    (when the socket dies, the greenlet will too AFAIK), and pass it the WS.
-
-    This took me hours. :(
+    an ongoing loop. This function HAS to exit for socketio to parse NEW
+    emissions from the client, so we start a greenlet attached too the socket
+    (when the socket dies, the greenlet will too), and pass it the WS/user.
     """
     beforeRequest()
     ns = request.namespace.socket['/api/poll']

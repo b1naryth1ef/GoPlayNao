@@ -33,10 +33,13 @@
 
                             <div class="row profile-info">
                                 <div class="col-md-7">
-                                    <div class="alert alert-info">
-                                        You will receive all future updates for
-                                        free!
-                                    </div>
+                                    {% set bans = user.getActiveBans() %}
+                                    {% if bans.count() %}
+                                        {% set ban = bans[0] %}
+                                        <div class="alert alert-danger">
+                                            This user is banned until {{ ban.getDurationString() }} for "{{ ban.reason }}"!
+                                        </div>
+                                    {% endif %}
 
                                     <h1>John Doe</h1>
 
