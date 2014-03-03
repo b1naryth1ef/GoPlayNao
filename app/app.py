@@ -1,7 +1,7 @@
 # Flask
-from flask import Flask, g, session, request
+from flask import Flask, g, request
 from flask.ext.openid import OpenID
-from flask.ext.socketio import SocketIO, emit
+from flask.ext.socketio import SocketIO
 
 # Util
 from steam import getSteamAPI
@@ -9,12 +9,12 @@ from database import User, redis, Session, Lobby
 from util import flashy, limit
 
 # Internal
-from worker import run
+# from worker import run
 from views.public import public
 from views.api import api
 
 # Global
-import sys, os, time, thread, json, gevent
+import time, json
 
 app = Flask(__name__)
 app.secret_key = "change_me"
@@ -56,7 +56,7 @@ def test(id):
 
 @app.route("/join/<id>")
 def jointest(id):
-    l = Lobby.select().where(Lobby.id == id).get() 
+    l = Lobby.select().where(Lobby.id == id).get()
     l.members.append(g.user.id)
     l.save()
     l.sendAction({

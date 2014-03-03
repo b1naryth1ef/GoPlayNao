@@ -2,8 +2,9 @@ from peewee import *
 from playhouse.postgres_ext import *
 from datetime import *
 from dateutil.relativedelta import relativedelta
-from flask import request, g
+from flask import request
 from steam import getSteamAPI
+from util import human_readable
 import bcrypt, json, redis, random, string, time
 
 db = PostgresqlExtDatabase('ns2pug', user="b1n", password="b1n", threadlocals=True)
@@ -11,11 +12,10 @@ redis = redis.Redis()
 steam = getSteamAPI()
 
 attrs = ['years', 'months', 'days', 'hours', 'minutes', 'seconds']
-human_readable = lambda delta: ['%d %s' % (getattr(delta, attr), getattr(delta, attr) > 1 and attr or attr[:-1]) for attr in attrs if getattr(delta, attr)]
-
 
 SESSION_ID_SIZE = 32
-get_random_number = lambda size: ''.join([random.choice(string.ascii_letters + string.digits) for i in range(size)])
+get_random_number = lambda size: ''.join([random.choice(string.ascii_letters + string.digits)
+    for i in range(size)])
 
 class BaseModel(Model):
     class Meta:
@@ -94,7 +94,8 @@ class User(BaseModel):
             & Friendship.active == True)
 
     def getFriendsQuery(self):
-        return Friendship.select().where(((Friendship.usera == self) | (Friendship.userb == self)) & (Friendship.active == True))
+        return Friendship.select().where(((Friendship.usera == self) | (Friendship.userb == self))
+            & (Friendship.active == True))
 
     def isFriendsWith(self, user):
         return bool(self.getFriendsWithQuery(user).count())
@@ -149,7 +150,8 @@ class Ban(BaseModel):
             "end": int(self.end.strftime("%s")) if self.end else "",
             "reason": self.reason,
             "source": self.source,
-            "duration": human_readable(self.end-self.start) if self.end and self.start else "forever"
+            "duration": human_readable(self.end-self.start)
+                if self.end and self.start else "forever"
         }
 
     def log(self, action=None, user=None, server=None):
@@ -204,9 +206,9 @@ class Server(BaseModel):
             "players": "|".join(map(lambda i: convert_steamid(i.steamid), match.getPlayers()))
         }))
 
-
     def findWaitingMatch(self):
-        return Match.select().where((Match.server == self) & state == MatchState.MATCH_STATE_PRE).get()
+        return Match.select().where((Match.server == self) &
+            state == MatchState.MATCH_STATE_PRE).get()
 
 class BanLogType(object):
     BAN_LOG_GENERIC = 1
@@ -270,7 +272,8 @@ class Lobby(BaseModel):
 
     def setMaps(self, maps=[]):
         maps = [Map.select().where(Map.name == i).get().id for i in maps]
-        self.config['maps'] = maps or [i.id for i in Map.select().where(Map.level == self.owner.level)]
+        self.config['maps'] = maps or [i.id for i in
+            Map.select().where(Map.level == self.owner.level)]
 
     def canJoin(self, user):
         if self.owner == user:
@@ -289,7 +292,8 @@ class Lobby(BaseModel):
         base = {
             "id": self.id,
             "state": self.state,
-            "members": [User.select().where(User.id == i).get().format() for i in self.getMembers()],
+            "members": [User.select().where(User.id == i).get().format()
+                for i in self.getMembers()],
             "owner": self.owner.id
         }
         if tiny: return base
@@ -379,7 +383,7 @@ class InviteType(object):
     INVITE_TYPE_LOBBY = 1
     INVITE_TYPE_RINGER = 2
     INVITE_TYPE_FRIEND = 3
-    INVITE_TYPE_TEAM = 4 # Hint of future plans
+    INVITE_TYPE_TEAM = 4  # Hint of future plans
 
 class InviteState(object):
     INVITE_WAITING = 1
@@ -425,7 +429,7 @@ class Invite(BaseModel):
             return "/lobby/%s" % self.ref
         elif self.invitetype == InviteType.INVITE_TYPE_FRIEND:
             return "/friends"
-        return ""        
+        return ""
 
     @classmethod
     def createLobbyInvite(cls, fromu, tou, lobby):
@@ -505,7 +509,7 @@ class Map(BaseModel):
 class Session(object):
     db = redis
 
-    LIFETIME = (60 * 60 * 24) * 14 # 14 days
+    LIFETIME = (60 * 60 * 24) * 14  # 14 days
 
     @classmethod
     def create(cls, user, source_ip):

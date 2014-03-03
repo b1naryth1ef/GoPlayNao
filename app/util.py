@@ -1,7 +1,8 @@
 from flask import request, flash, redirect, g
-from database import Session, redis
+from database import redis
 from functools import wraps
-from dateutil.relativedelta import relativedelta
+import json
+#from dateutil.relativedelta import relativedelta
 
 def flashy(m, f="danger", u="/"):
     flash(m, f)
@@ -75,10 +76,8 @@ def convert_steamid(id):
     if len(id) == 17:
         return int(id[3:]) - 61197960265728
     else:
-        return '765' + str(int(x) + 61197960265728)
+        return '765' + str(int(id) + 61197960265728)
 
 attrs = ['years', 'months', 'days', 'hours', 'minutes', 'seconds']
-human_readable = lambda delta: ['%d %s' % (getattr(delta, attr), getattr(delta, attr) > 1 and attr or attr[:-1]) for attr in attrs if getattr(delta, attr)]
-
-MAPS = ["ns2_summit", "ns2_tram", "ns2_mineshaft", "ns2_docking", "ns2_veil",
-"ns2_refinery", "ns2_biodome", "ns2_eclipse"]
+human_readable = lambda delta: ['%d %s' % (getattr(delta, attr),
+    getattr(delta, attr) > 1 and attr or attr[:-1]) for attr in attrs if getattr(delta, attr)]

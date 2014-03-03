@@ -19,7 +19,8 @@ LOBBY_TIMEOUT = 15
 
 @schedule(seconds=5)
 def task_user_timeout():
-    for lobby in Lobby.select().where((Lobby.state != LobbyState.LOBBY_STATE_UNUSED) & (Lobby.state != LobbyState.LOBBY_STATE_PLAY)):
+    for lobby in Lobby.select().where((Lobby.state != LobbyState.LOBBY_STATE_UNUSED) &
+            (Lobby.state != LobbyState.LOBBY_STATE_PLAY)):
         for member in lobby.getMembers():
             u = User.select().where(User.id == member).get()
             if (time.time() - float(redis.get("user:%s:lobby:%s:ping" % (member, lobby.id)) or 0)) > 20:
@@ -122,14 +123,16 @@ def task_stats_cache():
         data['current']['players']['playing'] += len(lobby.getMembers())
         data['current']['lobbies']['playing'] += 1
 
-    for server in Server.select().where((Server.mode == ServerType.SERVER_MATCH) & Server.active == True):
+    for server in Server.select().where((Server.mode == ServerType.SERVER_MATCH)
+            & Server.active == True):
         if Match.select().where((Match.server == server) &
                 (Match.state != MatchState.MATCH_STATE_FINISH)):
             data['current']['servers']['used'] += 1
             data['current']['matches'] += 1
 
-    data['current']['servers']['free'] = Server.select().where((Server.mode == ServerType.SERVER_MATCH)
-        & Server.active == True).count() - data['current']['servers']['used']
+    data['current']['servers']['free'] = (Server.select().where(
+        (Server.mode == ServerType.SERVER_MATCH) &
+        Server.active == True).count()) - data['current']['servers']['used']
 
     redis.set("stats_cache", json.dumps(data))
     redis.publish("global", json.dumps({"type": "stats", "data": data}))
@@ -163,8 +166,8 @@ class MatchFinder(object):
             if not len(teama) or not len(teamb):
                 continue
 
-            skilla = 0 # sum(map(lambda z: z.getSkillDifference(), teama))
-            skillb = 0 # sum(map(lambda z: z.getSkillDifference(), teamb))
+            skilla = 0  # sum(map(lambda z: z.getSkillDifference(), teama))
+            skillb = 0  # sum(map(lambda z: z.getSkillDifference(), teamb))
 
             if abs(skilla - skillb) <= max_skill:
                 return teama, teamb
@@ -178,7 +181,8 @@ class MatchFinder(object):
         possible_matches = []
 
         # Get a set of possible lobbies based on map and region selection
-        for item in Lobby.select().where((Lobby.state == LobbyState.LOBBY_STATE_SEARCH)).order_by(Lobby.created):
+        for item in Lobby.select().where(
+                (Lobby.state == LobbyState.LOBBY_STATE_SEARCH)).order_by(Lobby.created):
             if not self.get_shared(l.config['maps'], item.config['maps']):
                 print "Could not find shared maps between %s and %s" % (l.id, item.id)
                 break

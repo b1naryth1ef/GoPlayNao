@@ -1,11 +1,9 @@
-from flask import (Blueprint, render_template, flash, redirect, request,
-                        g, session, jsonify, Response, send_file)
-from flask.ext.socketio import emit
+from flask import (Blueprint, request, g, jsonify, Response, send_file)
 from database import *
 from util import *
 from PIL import Image
 from StringIO import StringIO
-import time, json, requests
+import json, requests
 
 api = Blueprint('api', __name__, url_prefix='/api')
 
@@ -273,7 +271,8 @@ def api_stats():
 
     This endpoint is limited to 60 requests per minute
     """
-    return Response(response=redis.get("stats_cache") or "{}", status=200, mimetype="application/json")
+    return Response(response=redis.get("stats_cache") or "{}",
+        status=200, mimetype="application/json")
 
 @api.route("/lobby/create", methods=['POST'])
 @authed()
@@ -297,7 +296,7 @@ def pre_lobby(id):
     """
     Helper function for lobby-related endpoints
     """
-    if id == None:
+    if id is None:
         return jsonify({
             "success": False,
             "msg": "Endpoint requires a lobby id!"
@@ -476,11 +475,14 @@ def api_lobby_action():
         if len(errors):
             word = "they have" if len(errors) > 1 else "has an"
             word2 = "bans" if len(errors) > 1 else "ban"
-            lobby.sendAction({"type": "msg", "msg": "%s cannot queue, %s active %s!" % (', '.join(errors), word, word2)})
-            return jsonify({"success": False, "msg": "%s users in the lobby cannot play!" % len(errors)})
+            lobby.sendAction({"type": "msg", "msg": "%s cannot queue, %s active %s!" %
+                (', '.join(errors), word, word2)})
+            return jsonify({"success": False, "msg": "%s users in the lobby cannot play!" %
+                len(errors)})
 
         if len(lobby.getMembers()) > 5:
-            lobby.sendAction({"type": "msg", "msg": "Queue cannot be started with more than 5 players!"})
+            lobby.sendAction(
+                {"type": "msg", "msg": "Queue cannot be started with more than 5 players!"})
             return jsonify({
                 "success": False,
                 "msg": "You cannot queue with more than 5 players!"
@@ -555,7 +557,7 @@ def api_lobby_invite():
     i.to_user = u
     i.invitetype = InviteType.INVITE_TYPE_LOBBY
     i.ref = l.id
-    i.duration = (60 * 5) # 5 minutes for lobby invites
+    i.duration = (60 * 5)  # 5 minutes for lobby invites
     i.save()
     i.notify()
 
@@ -585,7 +587,7 @@ def api_users_search():
         "results": [i.format() for i in u]
     })
 
-@api.route("/users/friend",) #methods=['POST'])
+@api.route("/users/friend")  # methods=['POST'])
 @authed()
 def api_users_friend():
     args, success = require(id=int)
@@ -625,8 +627,8 @@ def api_users_friend():
         w = waiting.get()
         if w.from_user == g.user:
             return jsonify({
-               "success": False,
-               "msg": "You've already invited that user to be your friend!"
+                "success": False,
+                "msg": "You've already invited that user to be your friend!"
             })
         else:
             return jsonify({
@@ -731,7 +733,8 @@ def api_invites_accept():
         })
 
     try:
-        i = Invite.select().where((Invite.id == args.id) & (Invite.state == InviteState.INVITE_WAITING)).get()
+        i = Invite.select().where((Invite.id == args.id) &
+            (Invite.state == InviteState.INVITE_WAITING)).get()
     except Invite.DoesNotExist:
         return jsonify({
             "success": False,
@@ -756,7 +759,8 @@ def api_invites_deny():
         })
 
     try:
-        i = Invite.select().where((Invite.id == args.id) & (Invite.state == InviteState.INVITE_WAITING)).get()
+        i = Invite.select().where((Invite.id == args.id) &
+            (Invite.state == InviteState.INVITE_WAITING)).get()
     except Invite.DoesNotExist:
         return jsonify({
             "success": False,

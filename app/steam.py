@@ -75,13 +75,16 @@ class SteamAPI(object):
             raise Exception("Invalid Workshop ID!")
 
         gameid = int(breadcrumbs[0][1].rsplit("/", 1)[-1])
-        userid = re.findall("steamcommunity.com/(profiles|id)/(.*?)$", breadcrumbs[-1][1])[0][-1].split("/", 1)[0]
+        userid = re.findall("steamcommunity.com/(profiles|id)/(.*?)$",
+            breadcrumbs[-1][1])[0][-1].split("/", 1)[0]
         title = q(".workshopItemTitle")[0].text
 
-        desc = if_len(q(".workshopItemDescription"), q(".workshopItemDescriptionForCollection"))[0].text
+        desc = if_len(q(".workshopItemDescription"),
+            q(".workshopItemDescriptionForCollection"))[0].text
 
         if len(breadcrumbs) == 3:
-            size, posted, updated = [[x.text for x in i] for i in q(".detailsStatsContainerRight")][0]
+            size, posted, updated = [[x.text for x in i]
+                for i in q(".detailsStatsContainerRight")][0]
 
             wf = WorkshopFile(id, title, desc, gameid, userid)
             wf.size = size
