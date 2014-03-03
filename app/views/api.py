@@ -287,6 +287,10 @@ def api_lobby_create():
     """
     config = json.loads(request.values.get("config"))
 
+    # Delete all other lobbies this guy owns (kinda sucks, but w/e)
+    for lobby in Lobby.select().where(Lobby.owner == g.user):
+        lobby.delete()
+
     lobby = Lobby.getNew(g.user, config.get("maps", []))
     data = lobby.format()
     data['success'] = True
@@ -719,7 +723,6 @@ def api_users_friends():
         "success": True,
         "friends": data
     })
-
 
 @api.route("/invites/accept", methods=['POST'])
 @authed()

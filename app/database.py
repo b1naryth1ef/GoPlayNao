@@ -241,6 +241,7 @@ class Lobby(BaseModel):
     state = IntegerField(default=LobbyState.LOBBY_STATE_CREATE)
     created = DateTimeField(default=datetime.utcnow)
     queuedat = DateTimeField(default=datetime.utcnow)
+    members = ArrayField(IntegerField, 5)
     config = JSONField()
 
     @classmethod
@@ -278,7 +279,7 @@ class Lobby(BaseModel):
         if self.owner == user:
             return True
 
-        if str(user.id) in self.getMembers():
+        if str(user.id) in self.members:
             return True
 
         for i in Invite.select().where((Invite.ref == self.id) & (Invite.to_user == user)):
@@ -291,8 +292,7 @@ class Lobby(BaseModel):
         base = {
             "id": self.id,
             "state": self.state,
-            "members": [User.get(User.id == i).format()
-                for i in self.getMembers()],
+            "members": [User.get(User.id == i).format() for i in self.members],
             "owner": self.owner.id
         }
         if tiny: return base
@@ -307,12 +307,9 @@ class Lobby(BaseModel):
             "type": "chat"
         })
 
-    def getMembers(self):
-        return redis.smembers("lobby:%s:members" % self.id)
-
     def sendAction(self, action):
         action['lobby'] = self.id
-        for user in self.getMembers():
+        for user in self.members:
             redis.publish("user:%s:push" % user, json.dumps(action))
 
     def startQueue(self):
@@ -346,7 +343,7 @@ class Lobby(BaseModel):
             redis.delete(key)
 
     def joinLobby(self, u):
-        redis.sadd("lobby:%s:members" % self.id, u.id)
+        self.members.append(u.id)
         self.sendAction({
             "type": "join",
             "member": u.format(),
@@ -361,7 +358,7 @@ class Lobby(BaseModel):
             "msg": msg % u.username
         })
 
-        redis.srem("lobby:%s:members" % self.id, u.id)
+        self.members.remove(u.id)
         if self.state == LobbyState.LOBBY_STATE_SEARCH:
             self.stopQueue()
 
@@ -377,6 +374,12 @@ class Lobby(BaseModel):
         TODO: get a avg skill diff for two lobbies
         """
         return 0
+
+    def delete(self):
+        """
+        TODO: kick users and gc this
+        """
+        return None
 
 class InviteType(object):
     INVITE_TYPE_LOBBY = 1
@@ -577,7 +580,7 @@ class Match(BaseModel):
 
     def getPlayers(self):
         for lobby in self.getLobbies():
-            for player in lobby.getMembers():
+            for player in lobby.members:
                 yield User.get(User.id == player)
 
     def setDefaultConfig(self):

@@ -21,6 +21,13 @@ def public_lobby(id=None):
             return flashy("You cannt join that lobby!")
         if lobby.state == LobbyState.LOBBY_STATE_UNUSED:
             return flashy("That lobby has expired!")
+
+        # LOL SILLY, you can't be in more than one lobby at a time! Duh!
+        for lob in Lobby.select.where(Lobby.members.contains(g.user.id)):
+            # I'm not sure if this is technically correct, does members
+            #  contain /active/ members or all members? W/e.
+            lob.userLeave(g.user)
+
         lobby.joinLobby(g.user)
     return render_template("lobby.html", lobby=id)
 
