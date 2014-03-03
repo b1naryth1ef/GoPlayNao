@@ -196,11 +196,12 @@ class Server(BaseModel):
         return free
 
     def setup(self, match):
+        map_name = Map.select().where(Map.id == match.config['map']).get().name
         redis.publish("server:%s" % self.id, json.dumps({
             "pid": 2,
             "match": match.id,
-            "map": match.config['map'],
-            "players": "|".join([i.steamid for i in match.getPlayers()])
+            "map": map_name,
+            "players": "|".join(map(lambda i: convert_steamid(i.steamid), match.getPlayers()))
         }))
 
 
@@ -641,5 +642,5 @@ if __name__ == "__main__":
     s.active = True
     s.save()
 
-    print "Server: %s | %s" % (s.id, s.hash
+    print "Server: %s | %s" % (s.id, s.hash)
     print "Test User: %s" % u.id

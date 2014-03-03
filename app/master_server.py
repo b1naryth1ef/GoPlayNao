@@ -45,11 +45,11 @@ class Connection(object):
 
     def packet_0(self, data):
         try:
-            s = Server.select().where(Server.id == data.get("id")).get()
+            s = Server.select().where(Server.id == data.get("sid")).get()
         except Server.DoesNotExist:
             return {"sucess": False, "msg": "Invalid Server ID!", "pid": 1}
 
-        if s.hash != data.get("hash"):
+        if s.hash != data.get("shash"):
             return {"success": False, "msg": "Invalid Server HASH!", "pid": 1}
 
         if self.addr not in s.hosts:
@@ -61,7 +61,7 @@ class Connection(object):
             return {"success": False, "msg": msg, "pid": 1}
 
         self.server = s
-        thread.start_new_thread(redis_loop)
+        thread.start_new_thread(self.redis_loop, ())
 
         # if data.get("mid", -1) != -1:
         #     # TODO: grab existing match

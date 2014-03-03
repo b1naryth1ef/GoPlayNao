@@ -7,7 +7,6 @@
 #include <json>
 
 #define VERSION "1"
-#define DURATION 18.0
 
 new Handle:gp_host;
 new Handle:gp_port;
@@ -147,7 +146,7 @@ public MatchStart() {
     Format(buffer, sizeof(buffer), "match-log-%d.txt", MATCH_ID);
     file = OpenFile(buffer, "w");
     LogLine("STARTED!");
-    ServerCommand("tv_record match_%d", MATCH_ID);
+    ServerCommand("tv_record match_%d\n", MATCH_ID);
 }
 
 // Flushes and closes the logfile
@@ -184,20 +183,17 @@ public bool:OnClientConnect(client, String:msg[], maxlen) {
 }
 
 public Action:Event_PlayerConnect(Handle:event, const String:name[], bool:dontBroadcast) {
-    // Ignore bots
-    if (!GetEventBool(event, "bot")) {
-        // Log the player connet message
-        decl String:networkid[128];
-        decl String:addr[128];
-        decl String:buffer[2048];
-        GetEventString(event, "networkid", networkid, sizeof(networkid));
-        GetEventString(event, "address", addr, sizeof(addr));
-        Format(buffer, sizeof(buffer), "PlayerConnect,%d,%s,%s",
-            GetEventInt(event, "userid"),
-            addr,
-            networkid);
-        LogLine(buffer);
-    }
+    // Log the player connect message
+    decl String:networkid[128];
+    decl String:addr[128];
+    decl String:buffer[2048];
+    GetEventString(event, "networkid", networkid, sizeof(networkid));
+    GetEventString(event, "address", addr, sizeof(addr));
+    Format(buffer, sizeof(buffer), "PlayerConnect,%d,%s,%s",
+        GetEventInt(event, "userid"),
+        addr,
+        networkid);
+    LogLine(buffer);
     return Plugin_Continue;
 }
 

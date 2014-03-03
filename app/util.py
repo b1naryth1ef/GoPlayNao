@@ -71,6 +71,12 @@ def json_payload_gen(typ):
         return obj
     return json_payload
 
+def convert_steamid(id):
+    if len(id) == 17:
+        return int(id[3:]) - 61197960265728
+    else:
+        return '765' + str(int(x) + 61197960265728)
+
 attrs = ['years', 'months', 'days', 'hours', 'minutes', 'seconds']
 human_readable = lambda delta: ['%d %s' % (getattr(delta, attr), getattr(delta, attr) > 1 and attr or attr[:-1]) for attr in attrs if getattr(delta, attr)]
 
