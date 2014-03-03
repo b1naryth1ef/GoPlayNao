@@ -14,7 +14,7 @@ def public_index():
 def public_lobby(id=None):
     if id:
         try:
-            lobby = Lobby.select().where(Lobby.id == id).get()
+            lobby = Lobby.get(Lobby.id == id)
         except Lobby.DoesNotExist:
             return flashy("That lobby does not exist!")
         if not lobby.canJoin(g.user):
@@ -41,7 +41,7 @@ def public_friends():
 @public.route("/u/<user>")
 def public_user(user=None):
     try:
-        u = User.select().where((User.username ** user) | (User.id == user)).get()
+        u = User.get((User.username ** user) | (User.id == user))
     except User.DoesNotExist:
         return flashy("No such user!")
 

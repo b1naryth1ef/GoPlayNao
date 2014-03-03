@@ -55,7 +55,7 @@ class User(BaseModel):
             raise Exception("User has VAC ban that is newer than a year!")
 
         try:
-            u = User.select().where(User.steamid == str(id)).get()
+            u = User.get(User.steamid == str(id))
         except User.DoesNotExist:
             data = steam.getUserInfo(id)
             u = User()
@@ -198,7 +198,7 @@ class Server(BaseModel):
         return free
 
     def setup(self, match):
-        map_name = Map.select().where(Map.id == match.config['map']).get().name
+        map_name = Map.get(Map.id == match.config['map']).name
         redis.publish("server:%s" % self.id, json.dumps({
             "pid": 2,
             "match": match.id,
@@ -207,8 +207,7 @@ class Server(BaseModel):
         }))
 
     def findWaitingMatch(self):
-        return Match.select().where((Match.server == self) &
-            state == MatchState.MATCH_STATE_PRE).get()
+        return Match.get((Match.server == self) & state == MatchState.MATCH_STATE_PRE)
 
 class BanLogType(object):
     BAN_LOG_GENERIC = 1
@@ -264,14 +263,14 @@ class Lobby(BaseModel):
 
     def getMatch(self):
         try:
-            return Match.select().where(Match.lobbies.contains(self.id) &
+            return Match.get(Match.lobbies.contains(self.id) &
                         (Match.state == MatchState.MATCH_STATE_PRE) &
-                        (Match.mtype == MatchType.MATCH_TYPE_LOBBY)).get()
+                        (Match.mtype == MatchType.MATCH_TYPE_LOBBY))
         except Match.DoesNotExist:
             return None
 
     def setMaps(self, maps=[]):
-        maps = [Map.select().where(Map.name == i).get().id for i in maps]
+        maps = [Map.get(Map.name == i).id for i in maps]
         self.config['maps'] = maps or [i.id for i in
             Map.select().where(Map.level == self.owner.level)]
 
@@ -292,7 +291,7 @@ class Lobby(BaseModel):
         base = {
             "id": self.id,
             "state": self.state,
-            "members": [User.select().where(User.id == i).get().format()
+            "members": [User.get(User.id == i).format()
                 for i in self.getMembers()],
             "owner": self.owner.id
         }
@@ -565,7 +564,7 @@ class Match(BaseModel):
 
     def getLobbies(self):
         for lob in self.lobbies:
-            yield Lobby.select().where(Lobby.id == lob).get()
+            yield Lobby.get(Lobby.id == lob)
 
     def cleanup(self):
         redis.delete("match:%s:accepted" % self.id)
@@ -579,7 +578,7 @@ class Match(BaseModel):
     def getPlayers(self):
         for lobby in self.getLobbies():
             for player in lobby.getMembers():
-                yield User.select().where(User.id == player).get()
+                yield User.get(User.id == player)
 
     def setDefaultConfig(self):
         self.config = {

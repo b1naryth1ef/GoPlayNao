@@ -65,7 +65,7 @@ def api_maps_image():
         return "", 400
 
     try:
-        m = Map.select().where(Map.id == args.map).get()
+        m = Map.get(Map.id == args.map)
     except Map.DoesNotExist:
         return "", 404
 
@@ -170,7 +170,7 @@ def api_bans_get():
         q = (Ban.user == args.userid)
 
     try:
-        b = Ban.select().where(q & Ban.active == True).order_by(Ban.created.desc()).get()
+        b = Ban.get(q & Ban.active == True).order_by(Ban.created.desc())
     except Ban.DoesNotExist:
         return jsonify({"success": False, "msg": "No ban exists for query!"})
 
@@ -236,10 +236,10 @@ def api_servers_register():
         })
 
     try:
-        s = Server.select().where(
-            Server.id == sid &
-            Server.hash == shash &
-            Server.hosts.contains(request.remote_addr)).get()
+        s = Server.get(
+                Server.id == sid &
+                Server.hash == shash &
+                Server.hosts.contains(request.remote_addr))
         sid = s.createSession()
     except Server.DoesNotExist:
         return jsonify({
@@ -303,7 +303,7 @@ def pre_lobby(id):
         })
 
     try:
-        lobby = Lobby.select().where(Lobby.id == id).get()
+        lobby = Lobby.get(Lobby.id == id)
     except Lobby.DoesNotExist:
         return jsonify({
             "success": False,
@@ -437,7 +437,7 @@ def api_lobby_action():
 
     if args.action == "kick":
         try:
-            u = User.select().where(User.id == request.values.get("user")).get()
+            u = User.get(User.id == request.values.get("user"))
         except User.DoesNotExist:
             return jsonify({
                 "success": False,
@@ -468,7 +468,7 @@ def api_lobby_action():
     if args.action == "start":
         errors = []
         for member in lobby.getMembers():
-            u = User.select().where(User.id == member).get()
+            u = User.get(User.id == member)
             if not u.canPlay():
                 errors.append(u.username)
 
@@ -513,7 +513,7 @@ def api_lobby_invite():
         })
 
     try:
-        u = User.select().where(User.id == args.uid).get()
+        u = User.get(User.id == args.uid)
     except User.DoesNotExist:
         return jsonfiy({
             "success": False,
@@ -521,7 +521,7 @@ def api_lobby_invite():
         })
 
     try:
-        l = Lobby.select().where(Lobby.id == args.lid).get()
+        l = Lobby.get(Lobby.id == args.lid)
     except Lobby.DoesNotExist:
         return jsonify({
             "success": False,
@@ -605,7 +605,7 @@ def api_users_friend():
         })
 
     try:
-        u = User.select().where(User.id == args.id).get()
+        u = User.get(User.id == args.id)
     except User.DoesNotExist:
         return jsonify({
             "success": False,
@@ -663,7 +663,7 @@ def api_users_unfriend():
         })
 
     try:
-        f = Friendship.select().where(Friendship.id == args.id).get()
+        f = Friendship.get(Friendship.id == args.id)
     except Friendship.DoesNotExist:
         return jsonify({
             "success": False,
@@ -685,7 +685,7 @@ def api_users_stats():
         })
 
     try:
-        u = User.select().where(User.id == args.id).get()
+        u = User.get(User.id == args.id)
     except User.DoesNotExist:
         return jsonify({
             "success": False,
@@ -733,8 +733,8 @@ def api_invites_accept():
         })
 
     try:
-        i = Invite.select().where((Invite.id == args.id) &
-            (Invite.state == InviteState.INVITE_WAITING)).get()
+        i = Invite.get((Invite.id == args.id) &
+            (Invite.state == InviteState.INVITE_WAITING))
     except Invite.DoesNotExist:
         return jsonify({
             "success": False,
@@ -759,8 +759,8 @@ def api_invites_deny():
         })
 
     try:
-        i = Invite.select().where((Invite.id == args.id) &
-            (Invite.state == InviteState.INVITE_WAITING)).get()
+        i = Invite.get((Invite.id == args.id) &
+            (Invite.state == InviteState.INVITE_WAITING))
     except Invite.DoesNotExist:
         return jsonify({
             "success": False,

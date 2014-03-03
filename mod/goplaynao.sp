@@ -189,7 +189,7 @@ public Action:Event_PlayerConnect(Handle:event, const String:name[], bool:dontBr
     decl String:buffer[2048];
     GetEventString(event, "networkid", networkid, sizeof(networkid));
     GetEventString(event, "address", addr, sizeof(addr));
-    Format(buffer, sizeof(buffer), "PlayerConnect,%d,%s,%s",
+    Format(buffer, sizeof(buffer), "0,%d,%s,%s",
         GetEventInt(event, "userid"),
         addr,
         networkid);
