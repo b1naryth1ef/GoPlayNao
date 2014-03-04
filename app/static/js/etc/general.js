@@ -38,6 +38,4 @@ $.fn.countdown = function (callback, duration, message) {
         }
     // Run interval every 1000ms (1 second)
     }, 1000);
-
 };
-

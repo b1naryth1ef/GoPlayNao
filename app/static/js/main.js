@@ -206,6 +206,11 @@ var pug = {
     },
 
     lobby: function (id) {
+        // We fade these in because when we get here because if the JS
+        //  has issues it will show mangled half-views of derpage.
+        $("#lobby-maker").show();
+        $("#lobby").show();
+
         pug.vglobal();
         if (id) {
             pug.lobbyJoin(id);
@@ -216,18 +221,22 @@ var pug = {
     },
 
     lobbyHandleMsg: function (data) {
-        console.log(data)
+        // Just in case
+        if (data.lobby != pug.lobbyid) {return;}
+
         switch(data.type) {
             case "chat":
                 pug.lobbyAddChat(data.from, data.msg)
                 break;
             case "join":
-                if (lobby != pug.lobbyid) {break;}
                 pug.lobbyAddMember(data.member);
                 pug.lobbyAddAction(data.msg, "success");
                 break;
             case "quit":
-                if (lobby != pug.lobbyid) {break;}
+                pug.lobbyRmvMember(data.member);
+                pug.lobbyAddAction(data.msg, "danger");
+                break;
+            case "kick":
                 if (data.member == USER.id) {
                     alert("You've been kicked from the lobby!");
                     window.location = "/"
@@ -264,6 +273,10 @@ var pug = {
                     pug.lobbyAddAction("Match Found, number "+data.id+"!", "success");
                     $("#lobby-info-main-accepting").fadeOut();
                 }
+                break;
+            case "delete":
+                alert("This lobby has been closed!");
+                window.location = "/";
                 break;
             default:
                 // sooooo not cool brah
@@ -579,8 +592,8 @@ var pug = {
 
     lobbyHandleState: function(state) {
         switch (state) {
-            case LobbyState.LOBBY_STATE_CREATE:
             case LobbyState.LOBBY_STATE_IDLE:
+            case LobbyState.LOBBY_STATE_CREATE:
             case LobbyState.LOBBY_STATE_UNUSED:
                 $("#lobby-info-main-queued").hide();
                 $("#lobby-info-main-waiting").show();
@@ -690,11 +703,9 @@ var pug = {
                 $(".bans-page").remove();
 
                 // Enable or disable forward button based on page number
-                if (pug.bans_page_num == (data.total / 100)) {
-                    console.log("DISABLED")
+                if ((data.total < 100) || (pug.bans_page_num == data.total / 100)) {
                     $("#bans-page-next").parent().addClass("disabled");
                 } else {
-                    console.log("ENABLED")
                     $("#bans-page-next").parent().removeClass("disabled");
                 }
 
@@ -728,6 +739,7 @@ var pug = {
         $("#ban-pagination").delegate(".bans-page", "click", function (e) {
             e.preventDefault();
             e.stopPropagation();
+            if (pug.bans_page_num == $(this).attr("id")) { return; }
             pug.bans_page_num = $(this).attr("id");
             pug.bansRender();
         })

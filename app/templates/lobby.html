@@ -34,7 +34,7 @@
     </div>
 
 {# This only gets shown when we are creating a new lobby #}
-<div class="row" id='lobby-maker'>
+<div class="row" id='lobby-maker' style="display: none;">
     <div class="col-md-12">
         <div class="widget box">
             <div id='lobby-maker-main' class="widget-content">
@@ -56,13 +56,13 @@
 </div>
 
 {# This gets shown when we're in a lobby #}
-<div id="lobby">
+<div id="lobby" style="display: none;">
     <div class="row" id="lobby-info">
         <div class="col-md-12">
             <div class="widget box">
                 <div id='lobby-info-main' class="widget-content" style="text-align: center;">
                     <div id="lobby-info-main-queued">
-                        <h3>Searching...</h3>
+                        <h2>Searching for a Match!</h2>
                         <p>
                             Remember, failing to join or leaving during the match can result in up to a month ban! Make sure you never skip out on your fellow players, and if you ever have technical difficulties, make sure to contact support!
                         </p>

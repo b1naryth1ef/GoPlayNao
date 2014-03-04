@@ -3,8 +3,10 @@ from database import *
 from util import *
 from PIL import Image
 from StringIO import StringIO
-import json, requests
+import json, requests, logging
 
+
+log = logging.getLogger(__name__)
 api = Blueprint('api', __name__, url_prefix='/api')
 
 @api.route("/info")
@@ -181,80 +183,6 @@ def api_bans_get():
     data['success'] = True
     return jsonify(data)
 
-# @api.route("/bans/ping")
-# def api_bans_ping():
-#     """
-#     Called by a server to notify the backend a banned client tried connecting.
-#     This should really never happen, becuase the backend will not allow
-#     banned players to join a lobby, but we want to track these events for
-#     abuse in the system regardless.
-
-#     Arguments:
-#         banid: the ban id
-
-#     Returned:
-#         ref: the added banlog for debug
-#     """
-#     args, success = require(banid=int)
-
-#     if not success:
-#         return jsonify({
-#             "success": False,
-#             "msg": "You must specify a banid for /bans/ping"
-#         })
-
-#     try:
-#         ban = Ban.select().where(Ban.id == args.banid).get()
-#     except Ban.DoesNotExist:
-#         return jsonify({"success": False, "msg": "Inavlid banid!"})
-
-#     id = ban.log(action=BanLogType.BAN_LOG_ATTEMPT, server=g.server.id)
-#     return jsonify({"success": True, "ref": id})
-
-@api.route("/servers/register")
-@limit(30)
-def api_servers_register():
-    """
-    Method to register a server session on the backend. This is similar to
-    most major API methods, in that it uses cookieless auth to hit the
-    backend API. The server simply registers with it's id and secret hash,
-    and retrieves a sessionid (limited by IP) that it can use for most requests.
-
-    Arguments:
-        sid: server id
-        shash: server hash
-
-    Returned:
-        sessionid: the sessionid created
-
-    This endpoint is limited to 30 requests per minute to prevent DoS and 
-    brute force attacks.
-    """
-    args, success = require(sid=int, shash=str)
-
-    if not success:
-        return jsonify({
-            "success": False,
-            "msg": "Registering a server requires an id and hash!"
-        })
-
-    try:
-        s = Server.get(
-                Server.id == sid &
-                Server.hash == shash &
-                Server.hosts.contains(request.remote_addr))
-        sid = s.createSession()
-    except Server.DoesNotExist:
-        return jsonify({
-            "success": False,
-            "msg": "Invalid server id or hash!"
-        })
-
-    return jsonify({
-        "success": True,
-        "sessionid": sid
-    })
-
 @api.route("/stats")
 @limit(60)
 def api_stats():
@@ -289,12 +217,16 @@ def api_lobby_create():
     Returns a lobby object.
     """
     config = json.loads(request.values.get("config"))
+    log.info("In lobby create!")
 
     # Delete all other lobbies this guy owns (kinda sucks, but w/e)
     for lobby in Lobby.select().where(Lobby.owner == g.user):
-        lobby.delete()
+        log.info("Deleting lobby #%s" % lobby.id)
+        lobby.cleanup()
+        lobby.delete().execute()
 
     lobby = Lobby.getNew(g.user, config.get("maps", []))
+    log.info("Created lobby #%s" % lobby.id)
     data = lobby.format()
     data['success'] = True
     return jsonify(data)
@@ -317,7 +249,6 @@ def pre_lobby(id):
             "msg": "No lobby with that id exists!"
         })
 
-    print lobby.members, lobby.id
     if not g.user.id in lobby.members:
         return jsonify({
             "success": False,

@@ -1,10 +1,11 @@
 from flask import request, flash, redirect, g
 # from database import redis
 from functools import wraps
-import json, redis
+import json, redis, logging
 #from dateutil.relativedelta import relativedelta
 
 # BLAH
+log = logging.getLogger(__name__)
 redis = redis.Redis()
 
 def flashy(m, f="danger", u="/"):

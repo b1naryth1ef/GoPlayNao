@@ -263,7 +263,6 @@ class Lobby(BaseModel):
     def getNew(cls, user, maps=[]):
         self = cls()
         self.owner = user
-        self.invited = []
 
         # Default Config
         self.config = {
@@ -273,7 +272,6 @@ class Lobby(BaseModel):
         }
         self.setMaps(maps)
         self.save()
-        self.cleanup()
         self.joinLobby(user)
         return self
 
@@ -308,7 +306,8 @@ class Lobby(BaseModel):
             "id": self.id,
             "state": self.state,
             "members": [User.get(User.id == i).format() for i in self.members],
-            "owner": self.owner.id
+            "owner": self.owner.id,
+            "queuedat": self.queuedat
         }
         if tiny: return base
         base['config'] = self.config
@@ -351,11 +350,10 @@ class Lobby(BaseModel):
             "state": self.state,
             "msg": "Queue stopped"
         })
-        # TODO: handle this state within workers
 
     def cleanup(self):
-        for key in redis.keys("lobby:%s:*" % self.id):
-            redis.delete(key)
+        self.stopQueue()
+        self.sendAction({"type": "delete"})
 
     def joinLobby(self, u):
         if u.id not in self.members:
@@ -380,7 +378,11 @@ class Lobby(BaseModel):
             self.stopQueue()
 
     def kickUser(self, u):
-        self.userLeave(u, msg="%s was kicked from the lobby")
+        self.sendAction({
+            "type": "kick",
+            "member": u.id,
+            "msg": "%s was kicked from the lobby"
+        })
         for i in Invite.select().where((Invite.ref == self.id) & (Invite.to_user == u)):
             if i.valid():
                 i.state = InviteState.INVITE_EXPIRED
@@ -391,12 +393,6 @@ class Lobby(BaseModel):
         TODO: get a avg skill diff for two lobbies
         """
         return 0
-
-    def delete(self):
-        """
-        TODO: kick users and gc this
-        """
-        return None
 
 class InviteType(object):
     INVITE_TYPE_LOBBY = 1
