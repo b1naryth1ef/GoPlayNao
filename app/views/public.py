@@ -23,7 +23,7 @@ def public_lobby(id=None):
             return flashy("That lobby has expired!")
 
         # LOL SILLY, you can't be in more than one lobby at a time! Duh!
-        for lob in Lobby.select.where(Lobby.members.contains(g.user.id)):
+        for lob in Lobby.select().where((Lobby.members.contains(g.user.id)) & (Lobby.id != id)):
             # I'm not sure if this is technically correct, does members
             #  contain /active/ members or all members? W/e.
             lob.userLeave(g.user)

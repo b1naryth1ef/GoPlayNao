@@ -75,6 +75,7 @@ function buildState(statea, stateb) {
 
 var pug = {
     lobbyid: null,
+    matchid: null,
     lobbypoll: 0,
     lobbydata: null,
     lobbymembers: [],
@@ -221,10 +222,12 @@ var pug = {
                 pug.lobbyAddChat(data.from, data.msg)
                 break;
             case "join":
+                if (lobby != pug.lobbyid) {break;}
                 pug.lobbyAddMember(data.member);
                 pug.lobbyAddAction(data.msg, "success");
                 break;
             case "quit":
+                if (lobby != pug.lobbyid) {break;}
                 if (data.member == USER.id) {
                     alert("You've been kicked from the lobby!");
                     window.location = "/"
@@ -249,17 +252,17 @@ var pug = {
                 $("#lobby-info-main-queued").show();
                 break;
             case "accept":
+                new Audio(SOUNDS.accept).play()
                 $("#lobby-accept-info").show();
                 $("#lobby-accept-accepted").text(data.num);
                 $("#lobby-accept-size").text(data.size);
                 if (data.num == data.size) {
-                    // Delayed so we can show fancy animations for accepted!
-                    setTimeout(function () {
-                        window.location = "/match/"+data.id;
-                    }, 1500);
+                    // Set matchid
+                    pug.matchid = data.id
+                    // Delayed so its more fancy
+                    setTimeout(pug.lobbyShowMatchInfo, 1500);
                     pug.lobbyAddAction("Match Found, number "+data.id+"!", "success");
                     $("#lobby-info-main-accepting").fadeOut();
-                    new Audio(SOUNDS.accept).play()
                 }
                 break;
             default:
@@ -268,6 +271,24 @@ var pug = {
                 console.log(data)
                 break;
         }
+    },
+
+    // Displays a modal with match information/server ip
+    lobbyShowMatchInfo: function () {
+        $.ajax("/api/match/info", {
+            data: {
+                "id": pug.matchid
+            },
+            success: function(data) {
+                if (data.success) {
+                    $("#match-found-ip").text(data.match.server.ip)
+                    $("#match-found-modal").modal('show')
+                } else {
+                    alert(data.msg);
+                }
+            }
+        })
+        
     },
 
     lobbyCreate: function(e) {
@@ -552,11 +573,8 @@ var pug = {
                 send_lobby_chat();
             }
         });
-        pug.lobbyHandleState(pug.lobbydata.state)
 
-        $("#lobby-invite-btn").click(function () {
-            $("#invite-modal").modal('show')
-        })
+        pug.lobbyHandleState(pug.lobbydata.state)
     },
 
     lobbyHandleState: function(state) {

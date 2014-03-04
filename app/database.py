@@ -4,8 +4,8 @@ from datetime import *
 from dateutil.relativedelta import relativedelta
 from flask import request
 from steam import SteamAPI
-from util import human_readable
-import bcrypt, json, redis, random, string, time
+from util import human_readable, convert_steamid
+import bcrypt, json, redis, random, string, time, trueskill
 
 db = PostgresqlExtDatabase('ns2pug', user="b1n", password="b1n", threadlocals=True)
 redis = redis.Redis()
@@ -35,8 +35,13 @@ class User(BaseModel):
 
     # Permissions
     level = IntegerField(default=0)
-    # Gameplay
-    rank = IntegerField(default=0)
+
+    # Rank
+    mu = FloatField(default=0)
+    sigma = FloatField(default=0)
+
+    def getSkill(self):
+        trueskill.Rating(mu=self.mu, sigma=self.sigma)
 
     def getActiveBans(self):
         return Ban.select().where(Ban.getActiveBanQuery() &
@@ -195,7 +200,7 @@ class Server(BaseModel):
         for server in Server.select().where((Server.mode == ServerType.SERVER_MATCH) &
                 (Server.active == True)):
             if Match.select().where((Match.server == server) &
-                    (Match.state != MatchState.MATCH_STATE_FINISH)).count():
+                    MatchState.getValidStateQuery()).count():
                 continue
             free.append(server)
         return free
@@ -206,11 +211,18 @@ class Server(BaseModel):
             "pid": 2,
             "match": match.id,
             "map": map_name,
-            "players": "|".join(map(lambda i: convert_steamid(i.steamid), match.getPlayers()))
+            "players": "|".join(map(lambda i: convert_steamid(i.steamid), match.getPlayers())),
         }))
 
     def findWaitingMatch(self):
         return Match.get((Match.server == self) & state == MatchState.MATCH_STATE_PRE)
+
+    def format(self):
+        return {
+            "id": self.id,
+            "region": self.region,
+            "ip": self.hosts[-1],
+        }
 
 class BanLogType(object):
     BAN_LOG_GENERIC = 1
@@ -244,7 +256,7 @@ class Lobby(BaseModel):
     state = IntegerField(default=LobbyState.LOBBY_STATE_CREATE)
     created = DateTimeField(default=datetime.utcnow)
     queuedat = DateTimeField(default=datetime.utcnow)
-    members = ArrayField(IntegerField, 5)
+    members = ArrayField(IntegerField, 5, default=[])
     config = JSONField()
 
     @classmethod
@@ -346,12 +358,14 @@ class Lobby(BaseModel):
             redis.delete(key)
 
     def joinLobby(self, u):
-        self.members.append(u.id)
-        self.sendAction({
-            "type": "join",
-            "member": u.format(),
-            "msg": "%s joined the lobby" % u.username
-        })
+        if u.id not in self.members:
+            self.members.append(u.id)
+            self.save()
+            self.sendAction({
+                "type": "join",
+                "member": u.format(),
+                "msg": "%s joined the lobby" % u.username
+            })
         redis.set("user:%s:lobby:%s:ping" % (u.id, self.id), time.time())
 
     def userLeave(self, u, msg="%s has left the lobby"):
@@ -360,8 +374,8 @@ class Lobby(BaseModel):
             "member": u.id,
             "msg": msg % u.username
         })
-
         self.members.remove(u.id)
+        self.save()
         if self.state == LobbyState.LOBBY_STATE_SEARCH:
             self.stopQueue()
 
@@ -548,6 +562,7 @@ class MatchType(object):
     MATCH_TYPE_LOBBY = 1
 
 class MatchState(object):
+    MATCH_STATE_INVALID = 0
     # Accepting
     MATCH_STATE_PRE = 1
     # Waiting for joins
@@ -558,6 +573,11 @@ class MatchState(object):
     MATCH_STATE_FINISH = 4
     # LOL WAT
     MATCH_STATE_OTHER = 5
+
+    @staticmethod
+    def getValidStateQuery():
+        return ((Match.state != MatchState.MATCH_STATE_INVALID) &
+            (Match.state != MatchState.MATCH_STATE_OTHER))
 
 class Match(BaseModel):
     lobbies = ArrayField(IntegerField)
@@ -595,12 +615,13 @@ class Match(BaseModel):
     def format(self, forServer=False):
         data = {
             "players": [i.steamid for i in self.getPlayers()],
-            "mtype": self.mtype,
             "state": self.state,
             "id": self.id
         }
         if forServer:
             data['players'] = ','.join(data['players'])
+        else:
+            data['server'] = self.server.format()
 
         data.update(self.config)
         return data

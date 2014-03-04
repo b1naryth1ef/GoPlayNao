@@ -19,9 +19,10 @@ LOBBY_TIMEOUT = 15
 
 @schedule(seconds=5)
 def task_user_timeout():
+    return
     for lobby in Lobby.select().where((Lobby.state != LobbyState.LOBBY_STATE_UNUSED) &
             (Lobby.state != LobbyState.LOBBY_STATE_PLAY)):
-        for member in lobby.getMembers():
+        for member in lobby.members:
             u = User.select().where(User.id == member).get()
             if (time.time() - float(redis.get("user:%s:lobby:%s:ping" % (member, lobby.id)) or 0)) > 20:
                 lobby.sendAction({
@@ -39,7 +40,7 @@ def task_lobby_timeout():
     If a user times out from a lobby, time them out
     """
     for lobby in Lobby.select().where((Lobby.state != LobbyState.LOBBY_STATE_UNUSED)):
-        for member in lobby.getMembers():
+        for member in lobby.members:
             u = User.select().where(User.id == member).get()
             if not redis.exists("lobby:ping:%s:%s" % (lobby.id, member)):
                 continue
@@ -57,7 +58,7 @@ def task_lobby_timeout():
 @schedule(minutes=5)
 def task_lobby_cleanup():
     for lobby in Lobby.select().where(Lobby.state != LobbyState.LOBBY_STATE_UNUSED):
-        if len(lobby.getMembers()): continue
+        if len(lobby.members): continue
         print "Cleaning up lobby: %s" % lobby.id
         lobby.state = LobbyState.LOBBY_STATE_UNUSED
         lobby.cleanup()
@@ -116,11 +117,11 @@ def task_stats_cache():
     }
 
     for lobby in Lobby.select().where(Lobby.state == LobbyState.LOBBY_STATE_SEARCH):
-        data['current']['players']['searching'] += len(lobby.getMembers())
+        data['current']['players']['searching'] += len(lobby.members)
         data['current']['lobbies']['searching'] += 1
 
     for lobby in Lobby.select().where(Lobby.state == LobbyState.LOBBY_STATE_PLAY):
-        data['current']['players']['playing'] += len(lobby.getMembers())
+        data['current']['players']['playing'] += len(lobby.members)
         data['current']['lobbies']['playing'] += 1
 
     for server in Server.select().where((Server.mode == ServerType.SERVER_MATCH)
@@ -143,18 +144,24 @@ class MatchFinder(object):
 
     def get_shared(self, *args):
         """
-        Returns a set of shared items between a infinite (?) amount of lists.
-
-        TOOD: maybe this could suck less?
+        Returns a set of shared items between an infinite (?) amount of lists.
         """
         return reduce(lambda x, y: x & y, map(set, args))
 
     def all_comb(self, obj):
+        """
+        Returns all the possible combinations for an infinite amount of lists
+        of items.
+        """
         for index in xrange(1, len(obj)+1):
             for comb in itertools.combinations(obj, index):
-                yield comb
+                if comb:
+                    yield comb
 
-    def get_teams(self, lobbies, max_skill):
+    def get_teams(self, lobbies):
+        """
+        Attempts to match to teams based on a set amount of lobbies
+        """
         for comb in self.all_comb(lobbies):
             teama, teamb = [], []
             for entry in comb:
@@ -166,27 +173,36 @@ class MatchFinder(object):
             if not len(teama) or not len(teamb):
                 continue
 
-            skilla = 0  # sum(map(lambda z: z.getSkillDifference(), teama))
-            skillb = 0  # sum(map(lambda z: z.getSkillDifference(), teamb))
+            # skilla = [i.getSkill() for i in [x.members for x in teama]]
+            # skillb = [i.getSkill() for i in [x.members for x in teamb]]
 
-            if abs(skilla - skillb) <= max_skill:
-                return teama, teamb
+            # skilla = [i.getSkill() for i in teama]
+            # skillb = [i.getSkill() for i in teamb]
+
+            # 60% chance of draw or greater, tweak this in testing
+            #if trueskill.quality([skilla, skillb]) < .60:
+            return teama, teamb
 
         return None, None
 
     def find_match(self, l):
-        MAX_SKILL_DIFF = 5
-
         valid_lobbies = []
         possible_matches = []
 
         # Get a set of possible lobbies based on map and region selection
         for item in Lobby.select().where(
                 (Lobby.state == LobbyState.LOBBY_STATE_SEARCH)).order_by(Lobby.created):
+            # Already has a match
+            if Match.select().where((Match.lobbies.contains(item.id)) & (
+                    MatchState.getValidStateQuery())).count():
+                continue
+
+            # No maps shared, why bother!
             if not self.get_shared(l.config['maps'], item.config['maps']):
                 print "Could not find shared maps between %s and %s" % (l.id, item.id)
                 break
-            # We don't have a concept of regions yet, add this in when we do
+
+            # TODO: We don't have a concept of regions yet, add this in when we do
             # if l.region != item.region:
             #     print "Region does not match between %s and %s" % (l.id, item.id)
             #     break
@@ -196,11 +212,10 @@ class MatchFinder(object):
             print "No valid lobbies found for %s" % l.id
             return None, None
 
-        # Generate ALL possible 5v5 matches
+        # Generate ALL possible matches
         for comb in self.all_comb(valid_lobbies):
-            # Matches have 10 players y0 dawg
-            if not comb: continue
-            if sum([len(i.getMembers()) for i in comb]) == self.SIZE:
+            # Limit those by valid lobby sizes
+            if sum([len(i.members) for i in comb]) == self.SIZE:
                 possible_matches.append(comb)
 
         # If we don't have any break out
@@ -219,21 +234,20 @@ class MatchFinder(object):
                 print "  No shared maps for match"
                 continue
 
-            # It's possible someone has blocked someone else...
-            blocks, players = [], []
+            # Check for blocked users, this could be a postgres query someday
+            players, blocked = [], []
             for lobby in match:
-                for member in lobby.getMembers():
-                    players.append(member)
-                    blocks += User.select().where(User.id == member).get().blocked
+                for player in lobby.members:
+                    u = User.get(User.id == player)
+                    players.append(u)
+                    [blocked.append(i) for i in u.blocked]
 
-            # Grab a inclusive set of blocks + players
-            if len(set(blocks) & set(players)):
-                print "  Users have blocked eachother, match will not work!"
+            if len(set(blocked) & set(map(lambda i: i.id, players))):
+                print "  Users have blocked eachother, this match will not work!"
                 continue
 
             # Attempt to build two teams that are decently even
-            a_team, b_team = self.get_teams(match, MAX_SKILL_DIFF)
-            print a_team, b_team
+            a_team, b_team = self.get_teams(match)
             if not a_team or not b_team:
                 print "  Could not get_teams on %s" % (match,)
                 continue
@@ -254,14 +268,12 @@ class MatchFinder(object):
         if not teams:
             return
 
-        if not maps:
-            # TODO: send msg to lobby
-            print "Match found but no maps in common!"
-            return
-
         servers = Server.getFreeServer()
         if not len(servers):
-            # TODO: send msg to lobby
+            lobby.sendAction({
+                "msg": "A match was found but there are no free servers!",
+                "cls": "warning"
+            })
             print "No free server found!"
             return
 
@@ -275,16 +287,18 @@ class MatchFinder(object):
         m.cleanup()
 
         for lobby in (teams[0]+teams[1]):
-            print lobby.id
             lobby.sendAction({"type": "match"})
 
+        # If not everyone accepts we send this out
         thread.start_new_thread(self.matchtimer, (m, ))
 
     def matchtimer(self, match):
-        time.sleep(11)
+        time.sleep(11.5)
         for lobby in match.getLobbies():
             if lobby.state == LobbyState.LOBBY_STATE_SEARCH:
                 lobby.sendAction({"type": "endmatch"})
+        match.state = MatchState.MATCH_STATE_INVALID
+        match.save()
 
     def loop(self):
         ps = redis.pubsub()

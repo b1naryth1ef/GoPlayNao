@@ -317,7 +317,8 @@ def pre_lobby(id):
             "msg": "No lobby with that id exists!"
         })
 
-    if not str(g.user.id) in lobby.getMembers():
+    print lobby.members, lobby.id
+    if not g.user.id in lobby.members:
         return jsonify({
             "success": False,
             "msg": "You do not have permission to that lobby!"
@@ -457,7 +458,7 @@ def api_lobby_action():
                 "msg": "Cannot kick yourself!"
             })
 
-        if str(u.id) not in lobby.getMembers():
+        if str(u.id) not in lobby.members:
             return jsonify({
                 "success": False,
                 "msg": "User not in lobby!"
@@ -474,7 +475,7 @@ def api_lobby_action():
 
     if args.action == "start":
         errors = []
-        for member in lobby.getMembers():
+        for member in lobby.members:
             u = User.get(User.id == member)
             if not u.canPlay():
                 errors.append(u.username)
@@ -487,7 +488,7 @@ def api_lobby_action():
             return jsonify({"success": False, "msg": "%s users in the lobby cannot play!" %
                 len(errors)})
 
-        if len(lobby.getMembers()) > 5:
+        if len(lobby.members) > 5:
             lobby.sendAction(
                 {"type": "msg", "msg": "Queue cannot be started with more than 5 players!"})
             return jsonify({
@@ -535,13 +536,13 @@ def api_lobby_invite():
             "msg": "No lobby with that id!"
         })
 
-    if not str(g.user.id) in l.getMembers():
+    if not g.user.id in l.members:
         return jsonify({
             "success": False,
             "msg": "You cannot invite users to that lobby!"
         })
 
-    if str(u.id) in l.getMembers():
+    if u.id in l.members:
         return jsonify({
             "success": False,
             "msg": "That user is already part of the lobby!"
@@ -735,7 +736,7 @@ def api_invites_accept():
     if not success:
         return jsonify({
             "success": False,
-            "msg": "You must give an invite id to accept an invite!"
+            "msg": "You must give an invite ID to accept an invite!"
         })
 
     try:
@@ -761,7 +762,7 @@ def api_invites_deny():
     if not success:
         return jsonify({
             "success": False,
-            "msg": "You must give an invite id to reject an invite!"
+            "msg": "You must give an invite ID to reject an invite!"
         })
 
     try:
@@ -776,3 +777,33 @@ def api_invites_deny():
     i.state = InviteState.INVITE_DENIED
     i.save()
     return jsonify({"success": True})
+
+@api.route("/match/info")
+@authed()
+def api_match_info():
+    args, success = required(id=int)
+
+    if not success:
+        return jsonify({
+            "success": False,
+            "msg": "You must provide a match ID!"
+        })
+
+    try:
+        m = Match.get((Match.id == args.id) & MatchState.getValidStateQuery())
+    except Match.DoesNotExist:
+        return jsonify({
+            "success": False,
+            "msg": "Invalid match ID!"
+        })
+
+    if g.user not in m.getPlayers():
+        return jsonify({
+            "success": False,
+            "msg": "You do not have permission to view that match!"
+        })
+
+    return jsonify({
+        "success": True,
+        "match": m.format()
+    })
