@@ -9,6 +9,9 @@ schedules = {}
 
 s = SteamAPI.new()
 
+def burst(a):
+    return reduce(lambda a, b: a+b, a)
+
 def schedule(**kwargs):
     def deco(f):
         schedules[f.__name__] = (datetime.utcnow(), relativedelta(**kwargs), f)
@@ -173,13 +176,13 @@ class MatchFinder(object):
             if not len(teama) or not len(teamb):
                 continue
 
-            # skilla = [i.getSkill() for i in [x.members for x in teama]]
-            # skillb = [i.getSkill() for i in [x.members for x in teamb]]
+            #skilla = burst([i.getSkill() for i in [x.members for x in teama]])
+            #skillb = burst([i.getSkill() for i in [x.members for x in teamb]])
 
             # skilla = [i.getSkill() for i in teama]
             # skillb = [i.getSkill() for i in teamb]
 
-            # 60% chance of draw or greater, tweak this in testing
+            #60% chance of draw or greater, tweak this in testing
             #if trueskill.quality([skilla, skillb]) < .60:
             return teama, teamb
 
