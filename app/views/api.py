@@ -405,11 +405,7 @@ def api_lobby_action():
         })
 
     if args.action == "start":
-        errors = []
-        for member in lobby.members:
-            u = User.get(User.id == member)
-            if not u.canPlay():
-                errors.append(u.username)
+        errors = map(lambda i: i.getActiveBans(), lobby.getMembers())
 
         if len(errors):
             word = "they have" if len(errors) > 1 else "has an"
@@ -420,8 +416,10 @@ def api_lobby_action():
                 len(errors)})
 
         if len(lobby.members) > 5:
-            lobby.sendAction(
-                {"type": "msg", "msg": "Queue cannot be started with more than 5 players!"})
+            lobby.sendAction({
+                "type": "msg",
+                "msg": "Queue cannot be started with more than 5 players!"
+            })
             return jsonify({
                 "success": False,
                 "msg": "You cannot queue with more than 5 players!"
@@ -587,7 +585,7 @@ def api_users_friend():
             "msg": "You've already invited that user to be your friend!"
         })
 
-    g.user.friendRequest(u)
+    Invite.createFriendRequest(g.user, u)
     return jsonify({"success": True})
 
 @api.route("/users/unfriend", methods=['POST'])

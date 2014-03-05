@@ -5,7 +5,8 @@ from dateutil.relativedelta import relativedelta
 from flask import request
 from steam import SteamAPI
 from util import human_readable, convert_steamid
-import bcrypt, json, redis, random, string, time, trueskill
+from util.impulse import Entity
+import bcrypt, json, redis, random, string, time
 
 db = PostgresqlExtDatabase('ns2pug', user="b1n", password="b1n", threadlocals=True)
 redis = redis.Redis()
@@ -21,7 +22,7 @@ class BaseModel(Model):
     class Meta:
         database = db
 
-class User(BaseModel):
+class User(BaseModel, Entity):
     username = CharField()
     email = CharField(null=True)
     steamid = CharField(null=True)
@@ -36,25 +37,16 @@ class User(BaseModel):
     # Permissions
     level = IntegerField(default=0)
 
-    # Rank
-    mu = FloatField(default=0)
-    sigma = FloatField(default=0)
-
-    def getSkill(self):
-        trueskill.Rating(mu=self.mu, sigma=self.sigma)
-
-    def getActiveBans(self):
-        return Ban.select().where(Ban.getActiveBanQuery() &
-                    ((Ban.user == self.id) | (Ban.steamid == self.steamid))).order_by(Ban.end)
-
-    def isOnline(self):
-        value = redis.get("user:%s:ping" % self.id) or 0
-        if (time.time() - float(value)) < 30:
-            return True
-        return False
+    # Rank and impulse
+    rank = IntegerField(default=0)
+    impulse = FloatField(default=0)
 
     @classmethod
     def steamGetOrCreate(cls, id):
+        """
+        Gets or creates a user based on a steamid. Raises an exception if
+        the user is banned.
+        """
         # We do not allow players with an "active" VAC ban on record to play
         ban = steam.getBanInfo(id)
         if ban is not None and ban < 365:
@@ -70,6 +62,23 @@ class User(BaseModel):
             u.save()
         return u
 
+    def getActiveBans(self):
+        """
+        Returns an active ban query which returns all active bans for this user,
+        in order of the end date.
+        """
+        return Ban.select().where(Ban.getActiveBanQuery() &
+                    ((Ban.user == self.id) | (Ban.steamid == self.steamid))).order_by(Ban.end)
+
+    def isOnline(self):
+        """
+        Returns true if the user is considered online by the system.
+        """
+        value = redis.get("user:%s:ping" % self.id) or 0
+        if (time.time() - float(value)) < 30:
+            return True
+        return False
+
     def checkPassword(self, pw):
         return bcrypt.hashpw(pw, self.password) == self.password
 
@@ -79,12 +88,6 @@ class User(BaseModel):
             self.ips.append(request.remote_addr)
         self.save()
         return Session.create(self, request.remote_addr)
-
-    def isValid(self):
-        return self.active and self.level >= 0
-
-    def canPlay(self):
-        return True
 
     def format(self):
         return {
@@ -106,13 +109,11 @@ class User(BaseModel):
     def isFriendsWith(self, user):
         return bool(self.getFriendsWithQuery(user).count())
 
-    def friendRequest(self, user):
-        i = Invite()
-        i.from_user = self
-        i.to_user = user
-        i.invitetype = InviteType.INVITE_TYPE_FRIEND
-        i.save()
-        i.notify()
+    def getFriendRequests(self):
+        return Invite.select().where(
+            (Invite.invitetype == InviteType.INVITE_TYPE_FRIEND) &
+            (Invite.to_user == self) &
+            (Invite.state == InviteState.INVITE_WAITING))
 
     def getStats(self):
         DAY = (60 * 60 * 24)
@@ -125,51 +126,6 @@ class User(BaseModel):
 
     def push(self, data):
         redis.publish("user:%s:push" % self.id, json.dumps(data))
-
-class Ban(BaseModel):
-    user = ForeignKeyField(User, null=True)
-    steamid = IntegerField(null=True)
-
-    created = DateTimeField(default=datetime.utcnow)
-    start = DateTimeField(default=datetime.utcnow)
-    end = DateTimeField(null=True)
-
-    reason = CharField()
-    active = BooleanField()
-
-    source = CharField()
-
-    # Match Reference
-    # match = ForeignKeyField(Match, null=True)
-
-    @classmethod
-    def getActiveBanQuery(cls, ref=()):
-        return (Ban.active == True) & ((Ban.end >> None) | (Ban.end < datetime.utcnow()))
-
-    def getDurationString(self):
-        return human_readable(self.end-self.start) if self.end and self.start else "forever"
-
-    def format(self):
-        return {
-            "id": self.id,
-            "user": self.user.format(),
-            "steamid": self.steamid,
-            "created": int(self.start.strftime("%s")),
-            "start": int(self.start.strftime("%s")) if self.start else "",
-            "end": int(self.end.strftime("%s")) if self.end else "",
-            "reason": self.reason,
-            "source": self.source,
-            "duration": self.getDurationString()
-        }
-
-    def log(self, action=None, user=None, server=None):
-        log = BanLog()
-        log.action = action or BanLogType.BAN_LOG_GENERIC
-        log.user = user
-        log.server = server
-        log.ban = self
-        log.save()
-        return log.id
 
 class ServerType():
     SERVER_MATCH = 1
@@ -185,6 +141,7 @@ class Server(BaseModel):
     name = CharField()
     region = IntegerField(default=ServerRegion.REGION_NA)
     hash = CharField()
+    hostname = CharField()
     hosts = ArrayField(CharField)
 
     lastping = DateTimeField(default=datetime.utcnow)
@@ -221,27 +178,8 @@ class Server(BaseModel):
         return {
             "id": self.id,
             "region": self.region,
-            "ip": self.hosts[-1],
+            "ip": self.hostsname,
         }
-
-class BanLogType(object):
-    BAN_LOG_GENERIC = 1
-    BAN_LOG_ERROR = 2
-    BAN_LOG_ATTEMPT = 3
-    BAN_LOG_ESCALATE = 4
-    BAN_LOG_EXTEND = 5
-    BAN_LOG_EXPIRE = 6
-    BAN_LOG_INVALIDATE = 7
-
-class BanLog(BaseModel):
-    """
-    Logs an action that happened to a ban
-    """
-    action = IntegerField(default=BanLogType.BAN_LOG_GENERIC)
-    ban = ForeignKeyField(Ban)
-    user = ForeignKeyField(User, null=True)
-    server = ForeignKeyField(Server, null=True)
-    created = DateTimeField(default=datetime.utcnow)
 
 class LobbyState(object):
     LOBBY_STATE_CREATE = 1
@@ -274,6 +212,10 @@ class Lobby(BaseModel):
         self.save()
         self.joinLobby(user)
         return self
+
+    def getMembers(self):
+        for member in self.members:
+            yield User.get(User.id == member)
 
     def getMatch(self):
         try:
@@ -388,11 +330,8 @@ class Lobby(BaseModel):
                 i.state = InviteState.INVITE_EXPIRED
                 i.save()
 
-    def getSkillDifference(self, other):
-        """
-        TODO: get a avg skill diff for two lobbies
-        """
-        return 0
+    def getSkill(self):
+        return map(lambda i: i.rank, self.getMembers()) / len(self.members)
 
 class InviteType(object):
     INVITE_TYPE_LOBBY = 1
@@ -455,6 +394,16 @@ class Invite(BaseModel):
         self.ref = lobby.id
         self.save()
         return self
+
+    @classmethod
+    def createFriendRequest(cls, usera, userb):
+        i = Invite()
+        i.from_user = usera
+        i.to_user = userb
+        i.invitetype = InviteType.INVITE_TYPE_FRIEND
+        i.save()
+        i.notify()
+        return i
 
     def notify(self):
         self.to_user.push({
@@ -622,6 +571,42 @@ class Match(BaseModel):
         data.update(self.config)
         return data
 
+class Ban(BaseModel):
+    user = ForeignKeyField(User, null=True)
+    steamid = IntegerField(null=True)
+
+    created = DateTimeField(default=datetime.utcnow)
+    start = DateTimeField(default=datetime.utcnow)
+    end = DateTimeField(null=True)
+
+    reason = CharField()
+    active = BooleanField()
+
+    source = CharField()
+
+    # Match Reference
+    match = ForeignKeyField(Match, null=True)
+
+    @classmethod
+    def getActiveBanQuery(cls, ref=()):
+        return (Ban.active == True) & ((Ban.end >> None) | (Ban.end < datetime.utcnow()))
+
+    def getDurationString(self):
+        return human_readable(self.end-self.start) if self.end and self.start else "forever"
+
+    def format(self):
+        return {
+            "id": self.id,
+            "user": self.user.format(),
+            "steamid": self.steamid,
+            "created": int(self.start.strftime("%s")),
+            "start": int(self.start.strftime("%s")) if self.start else "",
+            "end": int(self.end.strftime("%s")) if self.end else "",
+            "reason": self.reason,
+            "source": self.source,
+            "duration": self.getDurationString()
+        }
+
 def load_default_maps():
     print "Loading default maps..."
     with open("content/maps.json", "r") as f:
@@ -636,7 +621,7 @@ def load_default_maps():
         print "  Loaded map %s, %s" % (m.title, m.id)
 
 if __name__ == "__main__":
-    for table in [User, Server, Ban, BanLog, Lobby, Invite, Friendship, Map, Match]:
+    for table in [User, Server, Ban, Lobby, Invite, Friendship, Map, Match]:
         table.drop_table(True, cascade=True)
         table.create_table(True)
 
@@ -651,7 +636,7 @@ if __name__ == "__main__":
     u1.username = "Yolo Swaggings"
     u1.steamid = 1333337
     u1.save()
-    u1.friendRequest(u)
+    Invite.createFriendRequest(u1, u)
 
     b = Ban()
     b.user = u1
@@ -664,6 +649,7 @@ if __name__ == "__main__":
     s.name = "Test Server #1"
     s.region = ServerRegion.REGION_NA_IL
     s.hash = get_random_number(32)
+    s.hostname = "localhost"
     s.hosts = ["127.0.0.1", "localhost"]
     s.owner = u
     s.active = True

@@ -113,5 +113,3 @@ class SteamAPI(object):
                 id = item[0].get("href").rsplit("?id=", 1)[-1]
                 wc.files.append(self.getWorkshopFile(id))
             return wc
-
-

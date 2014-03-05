@@ -14,7 +14,6 @@ gevent-socketio==0.3.6
 gevent-websocket==0.9.3
 greenlet==0.4.2
 itsdangerous==0.23
-klein==0.2.3
 lxml==3.3.1
 peewee==2.2.1
 protobuf==2.5.0
@@ -25,7 +24,5 @@ python-dateutil==2.2
 python-openid==2.2.5
 redis==2.9.1
 requests==2.2.1
-six==1.5.2
-treq==0.2.0
 ujson==1.33
 wsgiref==0.1.2

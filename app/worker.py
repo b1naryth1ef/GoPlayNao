@@ -167,25 +167,21 @@ class MatchFinder(object):
         """
         for comb in self.all_comb(lobbies):
             teama, teamb = [], []
-            for entry in comb:
-                if len(teama) < (self.SIZE / 2):
-                    teama.append(entry)
+            for lobby in comb:
+                if map(lambda i: len(i.members), teama) < (self.SIZE / 2):
+                    teama.append(lobby)
                 else:
-                    teamb.append(entry)
+                    teamb.append(lobby)
 
             if not len(teama) or not len(teamb):
                 continue
 
-            #skilla = burst([i.getSkill() for i in [x.members for x in teama]])
-            #skillb = burst([i.getSkill() for i in [x.members for x in teamb]])
+            skilla = map(lambda i: i.getSkill(), teama)
+            skillb = map(lambda i: i.getSkill(), teama)
 
-            # skilla = [i.getSkill() for i in teama]
-            # skillb = [i.getSkill() for i in teamb]
-
-            #60% chance of draw or greater, tweak this in testing
-            #if trueskill.quality([skilla, skillb]) < .60:
+            if abs(skilla - skillb) > 5:
+                continue
             return teama, teamb
-
         return None, None
 
     def find_match(self, l):
