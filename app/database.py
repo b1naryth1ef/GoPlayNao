@@ -607,6 +607,17 @@ class Ban(BaseModel):
             "duration": self.getDurationString()
         }
 
+    @classmethod
+    def forUser(cls, u, reason, source):
+        self = cls()
+        self.user = u
+        self.steamid = u.steamid
+        self.reason = reason
+        self.source = source
+        self.active = True
+        self.save()
+        return self
+
 def load_default_maps():
     print "Loading default maps..."
     with open("content/maps.json", "r") as f:
@@ -638,12 +649,7 @@ if __name__ == "__main__":
     u1.save()
     Invite.createFriendRequest(u1, u)
 
-    b = Ban()
-    b.user = u1
-    b.reason = "Yolo'ing too hard!"
-    b.active = True
-    b.source = "MMAC"
-    b.save()
+    b = Ban.forUser(u1, "yoloing and swagging way too hard", "b1n")
 
     s = Server()
     s.name = "Test Server #1"

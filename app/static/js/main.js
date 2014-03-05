@@ -402,7 +402,7 @@ var pug = {
     },
 
     lobbyRenderMapSelection: function() {
-        $.ajax("/api/maps", {
+        $.ajax("/api/maps/list", {
             success: function (data) {
                 base = pug.getLocal("maps");
                 _.each(data, function (v) {

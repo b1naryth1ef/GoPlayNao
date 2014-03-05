@@ -34,7 +34,7 @@ def api_info():
 
     return jsonify(data)
 
-@api.route("/maps")
+@api.route("/maps/list")
 @limit(60)
 def api_maps():
     level = 0
@@ -143,7 +143,7 @@ def api_bans_get():
     Arguments:
         All the arguments in this call are exclusive and cannot be mixed.
         steamid: A steamid to query for.
-        banid: A banid to query for.
+        id: A banid to query for.
         userid: A userid to query for
 
     Returned:
@@ -159,25 +159,22 @@ def api_bans_get():
 
     This endpoint is limited to 120 requests per minute.
     """
-    args, _ = require(steamid=int, banid=int, userid=int)
+    args, _ = require(steamid=int, id=int, userid=int)
 
-    if not any([args.steamid, args.banid, args.userid]):
-        return jsonify({
-            "success": False,
-            "msg": "You must specify either steamid or banid for /bans/get"
-        })
+    if not one([args.steamid, args.id, args.userid]):
+        return error("You must specify exactly one value for steamid, banid or userid.")
 
     if args.steamid:
         q = (Ban.steamid == args.steamid)
-    if args.banid:
+    if args.id:
         q = (Ban.id == args.banid)
     if args.userid:
         q = (Ban.user == args.userid)
 
     try:
-        b = Ban.get(q & Ban.active == True).order_by(Ban.created.desc())
+        b = Ban.select().where(q & Ban.active == True).order_by(Ban.created.desc()).get()
     except Ban.DoesNotExist:
-        return jsonify({"success": False, "msg": "No ban exists for query!"})
+        return error("No ban found!")
 
     data = b.format()
     data['success'] = True

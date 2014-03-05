@@ -1,4 +1,4 @@
-from flask import request, flash, redirect, g
+from flask import request, flash, redirect, g, jsonify
 # from database import redis
 from functools import wraps
 import json, redis, logging
@@ -85,3 +85,17 @@ def convert_steamid(id):
 attrs = ['years', 'months', 'days', 'hours', 'minutes', 'seconds']
 human_readable = lambda delta: ['%d %s' % (getattr(delta, attr),
     getattr(delta, attr) > 1 and attr or attr[:-1]) for attr in attrs if getattr(delta, attr)]
+
+def one(arg, f=lambda i: i):
+    matched = False
+    for item in arg:
+        if item:
+            if matched: return False
+            matched = True
+    return matched
+
+def error(msg):
+    return jsonify({
+        "msg": msg,
+        "success": False
+    })
