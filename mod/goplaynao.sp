@@ -11,11 +11,16 @@
 new Handle:gp_host;
 new Handle:gp_port;
 new Handle:gp_serverid;
-new Handle:gp_serverhash;
+new Handle:gp_players;
+new Handle:gp_matchid;
+new Handle:gp_teama;
+new Handle:gp_teamb;
 new Handle:socket;
 
-new MATCH_ID = -1;
 new String:PLAYERS[1024];
+new String:TEAMA[1024];
+new String:TEAMB[1024];
+new TEAM_TEAM = 1;
 
 public Plugin:myinfo = 
 {
@@ -26,20 +31,25 @@ public Plugin:myinfo =
     url = "github.com/b1naryth1ef/goplaynao"
 }
 
-// The logfile
-new Handle:file = INVALID_HANDLE;
-
-
 public OnPluginStart() {
     // CVARS
     gp_host = CreateConVar("gp_host", "localhost", "The master server host");
     gp_port = CreateConVar("gp_port", "5595", "The master server port");
     gp_serverid = CreateConVar("gp_serverid", "1", "This servers ID");
-    gp_serverhash = CreateConVar("gp_serverhash", "1", "This servers hash");
+    gp_players = CreateConVar("gp_players", "", "Players allowed in this match");
+    gp_matchid = CreateConVar("gp_matchid", "0", "The match ID");
+    gp_teama = CreateConVar("gp_teama", "", "Team A");
+    gp_teamb = CreateConVar("gp_teamb", "", "Team B");
+
+    GetConVarString(gp_teama, TEAMA, sizeof(TEAMA));
+    GetConVarString(gp_teamb, TEAMB, sizeof(TEAMB));
+    GetConVarString(gp_players, PLAYERS, sizeof(PLAYERS));
+
+    LogMessage("Starting GOTV Demo...");
+    // Use %d instead of %s to save a buffer
+    ServerCommand("tv_record match_%d\n", GetConVarInt(gp_matchid));
 
     // Hook events
-    // HookEvent("player_connect", Event_PlayerConnect, EventHookMode_Post);
-
     HookEvent("player_death", Event_PlayerDeath, EventHookMode_Post);
     HookEvent("player_hurt", Event_PlayerHurt, EventHookMode_Post);
     HookEvent("item_purchase", Event_ItemPurchase, EventHookMode_Post);
@@ -50,6 +60,9 @@ public OnPluginStart() {
     HookEvent("bomb_exploded", Event_BombExploded, EventHookMode_Post);
     HookEvent("bomb_dropped", Event_BombDropped, EventHookMode_Post);
     HookEvent("bomb_pickup", Event_BombPickup, EventHookMode_Post);
+    HookEvent("announce_phase_end", HookHalftime, EventHookMode_Post);
+
+    AddCommandListener(HookJoinTeam, "jointeam");
 
     OpenSocket();
 }
@@ -62,116 +75,55 @@ public OpenSocket() {
     SocketConnect(socket, OnSocketConnected, OnSocketReceive, OnSocketDisconnected, host_buff, GetConVarInt(gp_port));
 }
 
-// When the socket is opened, we send a WELCOME message to the backend to handshake
-public OnSocketConnected(Handle:s, any:arg) {
-    SendWelcomePacket(INVALID_HANDLE);
-}
-
-public SendWelcomePacket(Handle:timer) {
-    // 64 characters, one extra for padding
-    decl String:hash_buff[65];
-    GetConVarString(gp_serverhash, hash_buff, sizeof(hash_buff));
-
-    // Build new welcome packet
-    new JSON:obj = json_create();
-    json_set_cell(obj, "id", 0);
-    json_set_cell(obj, "sid", GetConVarInt(gp_serverid));
-    json_set_string(obj, "shash", hash_buff);
-    json_set_cell(obj, "mid", MATCH_ID);
-    json_set_cell(obj, "version", StringToInt(VERSION));
-
-    decl String:encoded[1024];
-    json_encode(obj, encoded, sizeof(encoded));
-
-    SocketSend(socket, encoded);
-}
+public OnSocketConnected(Handle:s, any:arg) {}
 
 // TODO: invesitage chunking size of this
 public OnSocketReceive(Handle:s, String:recv[], const dataSize, any:arg) {
-    new JSON:data = json_decode(recv); 
-    if(data == JSON_INVALID) { 
-        LogError("JSON Decode Failed!"); 
-    }
-
-    new bool:success = false;
-    if (json_get_cell(data, "success", success) && !success) {
-        decl String:error[2048];
-        json_get_string(data, "msg", error, sizeof(error));
-        return LogError("Recieved error response '%s'!", error);
-    }
-
-    new id = -1;
-    json_get_cell(data, "pid", id);
-    switch (id) {
-        case 2: {
-            HandlePacketTwo(data);
-        }
-    }
-
-    return Plugin_Handled;
+    return 0;
 }
-
-public HandlePacketTwo(JSON:data) {
-    decl String:map_name[128];
-    json_get_string(data, "map", map_name, sizeof(map_name));
-
-    // Set the match_id
-    json_get_cell(data, "match", MATCH_ID);
-    LogMessage("Setting up match #%i", MATCH_ID);
-
-    json_get_string(data, "players", PLAYERS, sizeof(PLAYERS));
-
-    LogMessage("Changing level to %s", map_name);
-    ForceChangeLevel(map_name, "New Match");
-}
-
 
 // TOOD: handle this situation better
 public OnSocketDisconnected(Handle:s, any:arg) {
-    MatchEnd();
-    CloseHandle(socket);
+    OpenSocket();
 }
 
-// TODO: handle this situation better
+// This is generally bad, and causes matches to fail. :(
 public OnSocketError(Handle:s, const errorType, const errorNum, any:arg) {
     // 111 = conn refused, handle that gracefully
     LogError("socket error %d (errno %d)", errorType, errorNum);
     MatchEnd();
-    CloseHandle(socket);
+    CloseSocket();
 }
 
-// Opens the math log file for reading
-public MatchStart() {
-    decl String:buffer[512];
-    Format(buffer, sizeof(buffer), "match-log-%d.txt", MATCH_ID);
-    file = OpenFile(buffer, "w");
-    LogLine("STARTED!");
-    ServerCommand("tv_record match_%d\n", MATCH_ID);
+public CloseSocket() {
+    if (socket != INVALID_HANDLE) {
+        CloseHandle(socket);
+    }
 }
 
 // Flushes and closes the logfile
 public MatchEnd() {
-    FlushFile(file);
-    CloseHandle(file); 
+    CloseSocket();
 }
 
 // TODO: derp herp and lerp
 public OnPluginStop() {
-    MatchEnd();
+    CloseSocket();
 }
 
-// Logs a line to the match log
+// This sends a log line to the socket connection for parsing
 public LogLine(const String:data[]) {
-    if (file == INVALID_HANDLE) {
+    if (socket == INVALID_HANDLE) {
         return;
     }
 
     decl String:buffer[2048];
     Format(buffer, sizeof(buffer), "%d|%s", GetTime(), data);
-    WriteFileLine(file, buffer);
+    SocketSend(socket, buffer);
 }
 
-// Handles client connections
+// Handles client connections, prevents players not in the match from connecting
+// TODO: handle admin connections smartly
 public bool:OnClientConnect(client, String:msg[], maxlen) {    
     decl String:buffer[32];
     Format(buffer, sizeof(buffer), "%d", GetSteamAccountID(client));
@@ -180,6 +132,25 @@ public bool:OnClientConnect(client, String:msg[], maxlen) {
         return false;
     }
     return true;
+}
+
+public OnClientConnected(client) {
+    decl String:buffer[32];
+    Format(buffer, sizeof(buffer), "%d", GetSteamAccountID(client));
+    if (StrContains(TEAMA, buffer) <= 0) {
+        ChangeClientTeam(client, TEAM_TEAM);
+    } else {
+        ChangeClientTeam(client, (TEAM_TEAM == 1 ? 2 : 1));
+    }
+}
+
+public Action:HookJoinTeam(client, const String:command[], argc) 
+{
+    return Plugin_Handled;
+}
+
+public Action:HookHalftime(Handle:event, const String:name[], bool:dontBroadcast) {
+    TEAM_TEAM = 2;
 }
 
 public Action:Event_PlayerConnect(Handle:event, const String:name[], bool:dontBroadcast) {
@@ -211,7 +182,6 @@ public Action:Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroa
         GetEventInt(event, "penetrated"));
     LogLine(buffer);
 }
-
 
 // player_hurt
 public Action:Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast) {

@@ -278,6 +278,8 @@ class MatchFinder(object):
 
         m = Match()
         m.lobbies = map(lambda i: i.id, teams[0]+teams[1])
+        m.teama = map(lambda i: i.id, teams[0])
+        m.teamb = map(lambda i: i.id, teams[1])
         m.config = {"map": random.choice(list(maps))}
         m.server = servers[0]
         m.state = MatchState.MATCH_STATE_PRE

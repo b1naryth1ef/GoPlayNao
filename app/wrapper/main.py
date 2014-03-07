@@ -1,8 +1,9 @@
 from multiprocessing import Process
 from sockserver import start_server
-import redis, os, json, subprocess
+import redis, os, json, subprocess, logging
 
 r = redis.Redis(host=os.getenv("REDIS_HOST"), password=os.getenv("REDIS_PASS"))
+log = logging.getLogger(__file__)
 
 SOCKET_OFFSET = 5000
 
@@ -28,7 +29,8 @@ class Server(object):
 
         self.proc = None
         SOCKET_OFFSET += 1
-        self.server = start_server(SOCKET_OFFSET, self)
+        self.sockport = SOCKET_OFFSET
+        self.server = start_server(self.sockport , self)
 
         self.match = None
 
@@ -47,7 +49,7 @@ class Server(object):
         if data['tag'] == "match":
             self.match = data
             if self.proc:
-                print "Something is wrong, master wants to spawn new process, but we're running?!"
+                log.error("We got a new match packet, but a process is already running!")
             self.args = [
                 "-game csgo",
                 "-console",
@@ -58,10 +60,16 @@ class Server(object):
                 "-maxplayers 12",
                 "+game_type 0",
                 "+game_mode 1",
-                "+map %s" % data['map'],
+                "+map %s" % self.match['map'],
                 "+exec server.cfg",
-                "+hostname GoPlayMM #%s" % self.id
+                "+hostname GoPlayMM #%s" % self.id,
+                "+gp_players %s" % self.match['players'],
+                "+gp_port %s" % self.sockport,
+                "+gp_teama %s" % self.match['teama'],
+                "+gp_teamb %s" % self.match['teamb'],
+                "+gp_matchid %s" % self.match['id']
             ]
+            self.spawn()
 
     def run(self):
         ps = r.pubsub()

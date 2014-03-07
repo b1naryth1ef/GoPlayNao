@@ -165,10 +165,12 @@ class Server(BaseModel):
     def setup(self, match):
         map_name = Map.get(Map.id == match.config['map']).name
         redis.publish("server:%s" % self.id, json.dumps({
-            "pid": 2,
-            "match": match.id,
+            "tag": "match",
             "map": map_name,
+            "id": match.id
             "players": "|".join(map(lambda i: convert_steamid(i.steamid), match.getPlayers())),
+            "teama": "|".join(map(lambda i: convert_steamid(i.steamid), match.getTeamA())),
+            "teamb": "|".join(map(lambda i: convert_steamid(i.steamid), match.getTeamB()))
         }))
 
     def findWaitingMatch(self):
@@ -534,6 +536,9 @@ class Match(BaseModel):
     level = IntegerField(default=0)
     created = DateTimeField(default=datetime.utcnow)
 
+    teama = ArrayField(IntegerField)
+    teamb = ArrayField(IntegerField)
+
     def getLobbies(self):
         for lob in self.lobbies:
             yield Lobby.get(Lobby.id == lob)
@@ -549,6 +554,20 @@ class Match(BaseModel):
 
     def getPlayers(self):
         for lobby in self.getLobbies():
+            for player in lobby.members:
+                yield User.get(User.id == player)
+
+    # COPY
+    def getTeamA(self):
+        for lobby in self.teama:
+            lobby = Lobby.get(Lobby.id == lobby)
+            for player in lobby.members:
+                yield User.get(User.id == player)
+
+    # PASTE
+    def getTeamB(self):
+        for lobby in self.teamb:
+            lobby = Lobby.get(Lobby.id == lobby)
             for player in lobby.members:
                 yield User.get(User.id == player)
 
