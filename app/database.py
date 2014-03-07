@@ -167,7 +167,7 @@ class Server(BaseModel):
         redis.publish("server:%s" % self.id, json.dumps({
             "tag": "match",
             "map": map_name,
-            "id": match.id
+            "id": match.id,
             "players": "|".join(map(lambda i: convert_steamid(i.steamid), match.getPlayers())),
             "teama": "|".join(map(lambda i: convert_steamid(i.steamid), match.getTeamA())),
             "teamb": "|".join(map(lambda i: convert_steamid(i.steamid), match.getTeamB()))

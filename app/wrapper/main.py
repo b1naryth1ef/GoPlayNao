@@ -78,3 +78,8 @@ class Server(object):
         for item in ps.listen():
             if item['type'] == "message":
                 self.handle(json.loads(item['data']))
+
+Server(1,
+    path="/root/steam/SteamApps/common/Counter\-Strike\ Global\ Offensive\ Beta\ \-\ Dedicated\ Server/srcds_run",
+    ip="0.0.0.0",
+    port="27015")

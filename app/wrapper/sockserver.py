@@ -1,4 +1,3 @@
-from database import *
 import socket, thread
 
 class Connection(object):
