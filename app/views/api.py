@@ -402,7 +402,7 @@ def api_lobby_action():
         })
 
     if args.action == "start":
-        errors = map(lambda i: i.getActiveBans(), lobby.getMembers())
+        errors = [i.username for i in lobby.getMembers() if i.getActiveBans().count()]
 
         if len(errors):
             word = "they have" if len(errors) > 1 else "has an"
@@ -707,7 +707,7 @@ def api_invites_deny():
 @api.route("/match/info")
 @authed()
 def api_match_info():
-    args, success = required(id=int)
+    args, success = require(id=int)
 
     if not success:
         return jsonify({
@@ -732,4 +732,38 @@ def api_match_info():
     return jsonify({
         "success": True,
         "match": m.format()
+    })
+
+@api.route("/forum/list")
+def api_forum_list():
+    level = g.user.level if g.user else 0
+
+    forums = map(lambda i: i.format(level), Forum.select().where(
+        (Forum.perm_view <= level) &
+        (Forum.parent >> None)
+    ).order_by(Forum.order))
+
+    return success({
+        "forums": forums
+    })
+
+@api.route("/forum/posts/list")
+def api_forum_posts_list():
+    level = g.user.level if g.user else 0
+    args, s = require(id=int, page=int)
+
+    if not s:
+        return error("Forum post listing requires a forum id and page number")
+
+    posts = ForumPost.select().join(Forum).where(
+        (ForumPost.forum == args.id) &
+        (ForumPost.locked == False) &
+        (ForumPost.hidden == False) &
+        (Forum.perm_view <= level)
+    ).paginate(args.page, 25)
+
+    return success({
+        "posts": map(lambda i: i.format(level), posts),
+        "count": posts.count(),
+        "page": args.page
     })

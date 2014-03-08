@@ -99,3 +99,7 @@ def error(msg):
         "msg": msg,
         "success": False
     })
+
+def success(data):
+    data['success'] = True
+    return jsonify(data)

@@ -22,6 +22,10 @@ class BaseModel(Model):
     class Meta:
         database = db
 
+class UserLevel(object):
+    USER_LEVEL_BASE = 0
+    USER_LEVEL_ADMIN = 100
+
 class User(BaseModel, Entity):
     username = CharField()
     email = CharField(null=True)
@@ -35,7 +39,7 @@ class User(BaseModel, Entity):
     blocked = ArrayField(CharField, default=[])
 
     # Permissions
-    level = IntegerField(default=0)
+    level = IntegerField(default=UserLevel.USER_LEVEL_BASE)
 
     # Rank and impulse
     rank = IntegerField(default=0)
@@ -637,6 +641,73 @@ class Ban(BaseModel):
         self.save()
         return self
 
+class ReportState(object):
+    REPORT_STATE_OPEN = 1
+    REPORT_STATE_CLOSED = 2
+    REPORT_STATE_INVALID = 3
+    REPORT_STATE_VALID = 4
+    REPORT_STATE_OTHER = 5
+
+class ReportType(object):
+    REPORT_TYPE_GENERIC = 1
+    REPORT_TYPE_CHEAT = 2
+    REPORT_TYPE_GRIEF = 3
+    REPORT_TYPE_EXPLOIT = 4
+    REPORT_TYPE_MALICIOUS = 5
+
+class Report(BaseModel):
+    ufrom = ForeignKeyField(User, "reports_from")
+    uto = ForeignKeyField(User, "reports_to")
+    ref = IntegerField()
+    msg = TextField()
+    state = IntegerField(default=ReportState.REPORT_STATE_OPEN)
+    rtype = IntegerField(default=ReportType.REPORT_TYPE_GENERIC)
+    created = DateTimeField(default=datetime.utcnow)
+
+class Forum(BaseModel):
+    title = CharField()
+    perm_view = IntegerField(default=0)
+    perm_post = IntegerField(default=0)
+    order = IntegerField()
+    parent = ForeignKeyField("self", "children", null=True)
+    category = BooleanField(default=False)
+
+    def format(self, as_level=0):
+        data = {
+            "title": self.title,
+            "perms": {
+                "view": self.perm_view,
+                "post": self.perm_post
+            },
+            "order": self.order,
+            "posts": ForumPost.select().where(ForumPost.forum == self).count()
+        }
+
+        if self.parent:
+            data['parent'] = self.parent.id
+
+        data['children'] = []
+        for child in self.children:
+            if child.perm_view > as_level: continue
+            data['children'].append(child.format())
+        return data
+
+class ForumPost(BaseModel):
+    author = ForeignKeyField(User)
+    forum = ForeignKeyField(Forum)
+    thread = ForeignKeyField("self")
+    title = CharField(null=True)
+    content = TextField()
+    created = DateTimeField(default=datetime.utcnow)
+    updated = DateTimeField(default=datetime.utcnow)
+
+    locked = BooleanField(default=False)
+    hidden = BooleanField(default=False)
+    deleted = BooleanField(default=False)
+
+    def format(self, level):
+        return {}
+
 def load_default_maps():
     print "Loading default maps..."
     with open("content/maps.json", "r") as f:
@@ -650,12 +721,22 @@ def load_default_maps():
         m.save()
         print "  Loaded map %s, %s" % (m.title, m.id)
 
+def create_forums():
+    cat1 = Forum(title="GoPlayMM", perm_view=0, perm_post=100, order=0, category=True)
+    cat1.save()
+
+    f1 = Forum(title="News & Updates", perm_view=0, perm_post=100, order=0, parent=cat1)
+    f1.save()
+    f2 = Forum(title="General Discussion", perm_view=0, perm_post=0, order=0, parent=cat1)
+    f2.save()
+
 if __name__ == "__main__":
-    for table in [User, Server, Ban, Lobby, Invite, Friendship, Map, Match]:
+    for table in [User, Server, Ban, Lobby, Invite, Friendship, Map, Match, Report, Forum, ForumPost]:
         table.drop_table(True, cascade=True)
         table.create_table(True)
 
     load_default_maps()
+    create_forums()
 
     u = User()
     u.username = "test"
