@@ -30,7 +30,7 @@ class Server(object):
         self.proc = None
         SOCKET_OFFSET += 1
         self.sockport = SOCKET_OFFSET
-        self.server = start_server(self.sockport , self)
+        self.server = start_server(self.sockport, self)
 
         self.match = None
 

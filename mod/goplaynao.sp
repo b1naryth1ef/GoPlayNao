@@ -118,7 +118,7 @@ public LogLine(const String:data[]) {
     }
 
     decl String:buffer[2048];
-    Format(buffer, sizeof(buffer), "%d|%s", GetTime(), data);
+    Format(buffer, sizeof(buffer), "%s", data);
     SocketSend(socket, buffer);
 }
 
@@ -144,11 +144,11 @@ public OnClientConnected(client) {
     }
 }
 
-public Action:HookJoinTeam(client, const String:command[], argc) 
-{
+public Action:HookJoinTeam(client, const String:command[], argc) {
     return Plugin_Handled;
 }
 
+// TODO: will the teams autoswitch?
 public Action:HookHalftime(Handle:event, const String:name[], bool:dontBroadcast) {
     TEAM_TEAM = 2;
 }
@@ -290,4 +290,3 @@ public Action:Event_BombAbortDefuse(Handle:event, const String:name[], bool:dont
         GetEventInt(event, "userid"));
     LogLine(buffer);
 }
-
