@@ -127,7 +127,9 @@ public LogLine(const String:data[]) {
 public bool:OnClientConnect(client, String:msg[], maxlen) {    
     decl String:buffer[32];
     Format(buffer, sizeof(buffer), "%d", GetSteamAccountID(client));
-    if (StrContains(PLAYERS, buffer) <= 0) {
+    LogMessage("ClientID: `%s`", buffer);
+    LogMessage("Clients: `%s`, %d", PLAYERS, StrContains(PLAYERS, buffer) );
+    if (StrContains(PLAYERS, buffer) < 0) {
         strcopy(msg, maxlen, "You are not in this matchmaking session!");
         return false;
     }
@@ -137,6 +139,9 @@ public bool:OnClientConnect(client, String:msg[], maxlen) {
 public OnClientConnected(client) {
     decl String:buffer[32];
     Format(buffer, sizeof(buffer), "%d", GetSteamAccountID(client));
+
+    if (!IsClientConnected(client) || IsFakeClient(client)) { return; }
+
     if (StrContains(TEAMA, buffer) <= 0) {
         ChangeClientTeam(client, TEAM_TEAM);
     } else {
