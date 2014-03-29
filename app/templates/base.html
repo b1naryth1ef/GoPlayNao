@@ -130,10 +130,12 @@
                     {% endif %}
                     <li {% if request.path.startswith("/bans") %}  class="current" {% endif %}><a href="/bans"><i class="icon-remove"></i>Banlist</a></li>
                 </ul>
-                <div class="sidebar-title"> 
-                    <span>Notifications</span> 
-                </div>
-                <ul class="notifications" id="side-bar-notifications"></ul>
+                {% if g.user %}
+                    <div class="sidebar-title"> 
+                        <span>Notifications</span> 
+                    </div>
+                    <ul class="notifications" id="side-bar-notifications"></ul>
+                {% endif %}
             </div>
         </div>
         <div id="content">

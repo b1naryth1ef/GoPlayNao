@@ -1,10 +1,12 @@
 import socket, thread
+from parser import GameParser
 
 class Connection(object):
     def __init__(self, master, conn, addr):
         self.master = master
         self.conn = conn
         self.addr = addr
+        self.parser = GameParser(self.master.id)
 
     def push(self, data):
         print "Sending: `%s`" % data
@@ -15,9 +17,7 @@ class Connection(object):
             data = self.conn.recv(2048)
             if not data or not data.strip(): break
             print "Recv: `%s`" % data
-
-            if data.startswith("0"):
-                self.push(self.master.data['players'])
+            self.parser.handle(data)
 
         self.conn.close()
 
