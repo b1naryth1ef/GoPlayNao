@@ -705,8 +705,21 @@ class ForumPost(BaseModel):
     hidden = BooleanField(default=False)
     deleted = BooleanField(default=False)
 
+    @classmethod
+    def getValidQuery(cls):
+        return ((ForumPost.locked == False) & (ForumPost.hidden == False))
+
     def format(self, level):
-        return {}
+        return {
+            "author": self.author.id,
+            "forum": self.forum.id,
+            "thread": self.thread.id,
+            "title": self.title,
+            "content": self.content,
+            "created": self.created,
+            "updated": self.updated,
+            "deleted": self.deleted
+        }
 
 def load_default_maps():
     print "Loading default maps..."
@@ -727,7 +740,7 @@ def create_forums():
 
     f1 = Forum(title="News & Updates", perm_view=0, perm_post=100, order=0, parent=cat1)
     f1.save()
-    f2 = Forum(title="General Discussion", perm_view=0, perm_post=0, order=0, parent=cat1)
+    f2 = Forum(title="General Discussion", perm_view=0, perm_post=1, order=0, parent=cat1)
     f2.save()
 
 if __name__ == "__main__":

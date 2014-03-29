@@ -757,8 +757,7 @@ def api_forum_posts_list():
 
     posts = ForumPost.select().join(Forum).where(
         (ForumPost.forum == args.id) &
-        (ForumPost.locked == False) &
-        (ForumPost.hidden == False) &
+        (ForumPost.getValidQuery()) &
         (Forum.perm_view <= level)
     ).paginate(args.page, 25)
 
@@ -767,3 +766,38 @@ def api_forum_posts_list():
         "count": posts.count(),
         "page": args.page
     })
+
+@api.route("/forum/posts/get")
+def api_forum_posts_get():
+    level = g.user.level if g.user else 0
+    args, s = require(id=int, page=int)
+
+    if not s:
+        return error("Forum thread listing requires post id and page number")
+
+    try:
+        post = ForumPost.get(ForumPost.id == args.id)
+    except ForumPost.DoesNotExist:
+        return error("Invalid post id")
+
+    if post.thread:
+        return error("Not a parent post!")
+
+    if post.forum.perm_view < level:
+        return error("You do not have permission to view that")
+
+    posts = ForumPost.select().where(
+        (ForumPost.thread == post) &
+        (ForumPost.getValidQuery())
+    ).paginate(args.page, 25)
+
+    return success({
+        "posts": map(lambda i: i.format(level), posts),
+        "count": posts.count(),
+        "page": args.page
+    })
+
+@api.route("/forum/post")
+@authed
+def api_forum_post():
+    args, s = req(x=1, y=2)
