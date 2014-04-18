@@ -44,7 +44,7 @@ class User(BaseModel, Entity):
     # Rank and impulse
     rank = IntegerField(default=0)
     impulse = FloatField(default=0)
-    stats = JSONField()
+    stats = JSONField(default={})
 
     @classmethod
     def steamGetOrCreate(cls, id):
@@ -241,7 +241,7 @@ class Lobby(BaseModel):
         if self.owner == user:
             return True
 
-        if str(user.id) in self.members:
+        if user.id in self.members:
             return True
 
         for i in Invite.select().where((Invite.ref == self.id) & (Invite.to_user == user)):
@@ -330,7 +330,7 @@ class Lobby(BaseModel):
         self.sendAction({
             "type": "kick",
             "member": u.id,
-            "msg": "%s was kicked from the lobby"
+            "msg": "%s was kicked from the lobby" % u.username
         })
         for i in Invite.select().where((Invite.ref == self.id) & (Invite.to_user == u)):
             if i.valid():
@@ -540,7 +540,7 @@ class Match(BaseModel):
     size = IntegerField(default=10)
     level = IntegerField(default=0)
     created = DateTimeField(default=datetime.utcnow)
-    result = JSONField()
+    result = JSONField(default={})
 
     teama = ArrayField(IntegerField)
     teamb = ArrayField(IntegerField)
@@ -769,7 +769,7 @@ if __name__ == "__main__":
     s = Server()
     s.name = "Test Server #1"
     s.region = ServerRegion.REGION_NA_IL
-    s.hash = get_random_number(32)
+    s.hash = '1' #get_random_number(32)
     s.hostname = "localhost"
     s.hosts = ["127.0.0.1", "localhost"]
     s.owner = u

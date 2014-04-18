@@ -387,7 +387,7 @@ def api_lobby_action():
                 "msg": "Cannot kick yourself!"
             })
 
-        if str(u.id) not in lobby.members:
+        if u.id not in lobby.members:
             return jsonify({
                 "success": False,
                 "msg": "User not in lobby!"
@@ -492,7 +492,7 @@ def api_lobby_invite():
     i.to_user = u
     i.invitetype = InviteType.INVITE_TYPE_LOBBY
     i.ref = l.id
-    i.duration = (60 * 5)  # 5 minutes for lobby invites
+    i.duration = (60 * 3)  # 3 minutes for lobby invites
     i.save()
     i.notify()
 
@@ -504,6 +504,7 @@ def api_lobby_invite():
 
     return jsonify({"success": True})
 
+# TODO: elasticsearch
 @api.route("/users/search", methods=["POST"])
 @authed()
 def api_users_search():
@@ -522,7 +523,8 @@ def api_users_search():
         "results": [i.format() for i in u]
     })
 
-@api.route("/users/friend")  # methods=['POST'])
+# TODO: get is for testing
+@api.route("/users/friend", methods=['GET', 'POST'])
 @authed()
 def api_users_friend():
     args, success = require(id=int)
@@ -735,7 +737,8 @@ def api_match_info():
         "match": m.format()
     })
 
-@api.route("/match/completed")
+# This is a backend call
+@api.route("/match/completed", methods=['POST'])
 def api_match_completed():
     args, success = require(id=int, mid=int, hash=str, data=str)
 
@@ -783,9 +786,6 @@ def api_match_completed():
     m.result['files']['demo'] = STORAGE.storeFile(data['files']['demo'])
     m.result['files']['log'] = STORAGE.storeFile(data['files']['log'])
 
-    # Store some data
-    m.result['teama'] = data['score']['teama']
-    m.result['teamb'] = data['score']['teamb']
     m.save()
 
 @api.route("/match/file")

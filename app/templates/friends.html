@@ -14,7 +14,8 @@
                     <h4>Your Friends</h4>
                 </div>
                 <div class="widget-content">
-                    <table class="table table-hover">
+                    {% if friends %}
+                        <table class="table table-hover">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -31,7 +32,11 @@
                             </tr>
                             {% endfor %}
                         </tbody> 
-                    </table>
+                        </table>
+                    {% else %}
+                        <h3>Awwww... You don't have any friends yet! Go make some!</h3>
+                    {% endif %}
+
                 </div>
             </div>
         </div>
