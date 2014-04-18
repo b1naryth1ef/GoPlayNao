@@ -6,6 +6,7 @@ r = redis.Redis(host=os.getenv("REDIS_HOST"), password=os.getenv("REDIS_PASS"))
 log = logging.getLogger(__file__)
 
 SOCKET_OFFSET = random.randint(5000, 7000)
+BASE_PATH = "/root/steam/SteamApps/common/Counter-Strike Global Offensive Beta - Dedicated Server/"
 
 class Master(object):
     def __init__(self, ids=[]):
@@ -36,6 +37,18 @@ class Server(object):
 
         self.run()
 
+    def upload(self, i): pass
+
+    # TODO: upload demo and sql db
+    def endMatch(self):
+        self.kill()
+
+        DEMO_PATH = os.path.join(BASE_PATH, "csgo", "match_%s.dem" % self.match['id'])
+        DB_PATH = "log_%s.db" % self.match['id']
+
+        self.upload(DEMO_PATH)
+        self.upload(DB_PATH)
+
     def debug(self, r):
         while True:
             data = r.read()
@@ -47,8 +60,8 @@ class Server(object):
             stdout=subprocess.PIPE,
             stdin=subprocess.PIPE,
             stderr=subprocess.PIPE)
-        thread.start_new_thread(self.debug (self.proc.stdout, ))
-        thread.start_new_thread(self.debug (self.proc.stderr, ))
+        thread.start_new_thread(self.debug, (self.proc.stdout, ))
+        thread.start_new_thread(self.debug, (self.proc.stderr, ))
 
     def kill(self):
         self.proc.kill()
@@ -88,9 +101,10 @@ class Server(object):
             if item['type'] == "message":
                 self.handle(json.loads(item['data']))
 
-# TEMP, FIXME
-os.chdir("/root/steam/SteamApps/common/Counter-Strike Global Offensive Beta - Dedicated Server/")
-Server(1,
-    path="./srcds_linux",
-    ip="0.0.0.0",
-    port="27015")
+if __name__ == '__main__':
+    # TEMP, FIXME, need a config here
+    os.chdir(BASE_PATH)
+    Server(1,
+        path="./srcds_linux",
+        ip="0.0.0.0",
+        port="27015")

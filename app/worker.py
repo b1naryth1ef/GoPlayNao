@@ -3,7 +3,8 @@ from steam import SteamAPI
 from database import *
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
-import itertools
+from storage import STORAGE
+import itertools, tempfile, sqlite3
 
 schedules = {}
 
@@ -38,6 +39,7 @@ def task_user_timeout():
 
 @schedule(seconds=5)
 def task_lobby_timeout():
+    # TODO: fix/test
     return
     """
     If a user times out from a lobby, time them out
@@ -67,6 +69,7 @@ def task_lobby_cleanup():
         lobby.cleanup()
         lobby.save()
 
+# Our workshop ID
 WORKSHOP_ID = "231287804"
 
 @schedule(minutes=5)
@@ -141,6 +144,95 @@ def task_stats_cache():
     redis.set("stats_cache", json.dumps(data))
     redis.publish("global", json.dumps({"type": "stats", "data": data}))
 
+
+def get_base_match_stats():
+    return {
+        # Duration in seconds
+        "duration": 0,
+
+        # Rounds played
+        "rounds": 0,
+
+        # "teama" or "teamb" or None (tie)
+        "winner": None,
+
+        # Team stats
+        "teama": {
+            "players": {},
+            "score": 0
+        },
+
+        "teamb": {
+            "players": {},
+            "score": 0
+        },
+
+        # The rank and impulse from this match
+        "rank": [0, 0],
+
+        # Data on rounds
+        "rounds": []
+    }
+
+def get_base_player_stats():
+    return {
+        "kills": 0,
+        "deaths": 0,
+        "assists": 0,
+        "score": 0,
+        "shots": {
+            "fired": 0,
+            "missed": 0,
+            "hit": 0,
+        },
+
+        # Hit locations
+        "hits": {
+            "body": 0,
+            "head": 0,
+            "chest": 0,
+            "stomach": 0,
+            "left_arm": 0,
+            "right_arm": 0,
+            "left_leg": 0,
+            "right_leg": 0,
+        }
+    }
+
+def get_base_round_stats():
+    return {
+        # Teama or Teamb
+        "winner": None,
+
+        # Method for the round being won
+        "method": None,
+    }
+
+@scheduler(minutes=1)
+def task_match_consumer():
+    """
+    Builds some stuff async after matches finish
+    """
+
+    matches = Match.select().where((Match.result['parsed'] == False) & (
+        Match.state == MatchState.MATCH_STATE_FINISH))
+
+    for match in matches:
+        # Create a named tempfile
+        temp = tempfile.NamedTemporaryFile()
+
+        # Load in memory
+        f = STORAGE.getFile(match.result['files']['log'])
+
+        # Copy memory file into temp file (LOL UR PRO AT PRUGRMIN)
+        temp.write(f.read())
+
+        # Connect sqlite DB
+        db = sqlite3.connect(temp.name)
+        match.result['stats'] = get_base_match_stats()
+
+        # TODO: fill in json stats
+        # TODO: also make a chat log
 
 class MatchFinder(object):
     SIZE = 2

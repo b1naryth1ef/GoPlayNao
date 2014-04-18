@@ -6,7 +6,8 @@ class GameParser(object):
     """
     Rev 1 game parser
     """
-    def __init__(self, id):
+    def __init__(self, parent, id):
+        self.parent = parent
         self.db = sqlite3.connect("log_%s.db" % id)
 
     def handle(self, packet):
@@ -21,3 +22,7 @@ class GameParser(object):
 
         if hasattr(self, "packet_%s" % args[0]):
             return getattr(self, "packet_%s" % args[0])(args[1:])
+
+    def packet_9999(self, packet):
+        log.info("Got game-end packet!")
+        self.parent.end()

@@ -44,6 +44,7 @@ class User(BaseModel, Entity):
     # Rank and impulse
     rank = IntegerField(default=0)
     impulse = FloatField(default=0)
+    stats = JSONField()
 
     @classmethod
     def steamGetOrCreate(cls, id):
@@ -178,7 +179,7 @@ class Server(BaseModel):
         }))
 
     def findWaitingMatch(self):
-        return Match.get((Match.server == self) & state == MatchState.MATCH_STATE_PRE)
+        return Match.get((Match.server == self) & (Match.state == MatchState.MATCH_STATE_PRE))
 
     def format(self):
         return {
@@ -539,6 +540,7 @@ class Match(BaseModel):
     size = IntegerField(default=10)
     level = IntegerField(default=0)
     created = DateTimeField(default=datetime.utcnow)
+    result = JSONField()
 
     teama = ArrayField(IntegerField)
     teamb = ArrayField(IntegerField)

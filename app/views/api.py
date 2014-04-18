@@ -1,10 +1,10 @@
-from flask import (Blueprint, request, g, jsonify, Response, send_file)
+from flask import (Blueprint, request, g, jsonify, Response, send_file, make_response)
 from database import *
 from util import *
 from PIL import Image
 from StringIO import StringIO
+from storage import STORAGE
 import json, requests, logging
-
 
 log = logging.getLogger(__name__)
 api = Blueprint('api', __name__, url_prefix='/api')
@@ -84,6 +84,7 @@ def api_maps_image():
         img = img.resize((args.width, args.height), Image.ANTIALIAS)
         img.save(buffered, 'JPEG', quality=90)
         buffered.seek(0)
+
         # Images are cached for 6 hours
         redis.setex(key, buffered.getvalue(), (60 * 60 * 6))
 
@@ -733,6 +734,96 @@ def api_match_info():
         "success": True,
         "match": m.format()
     })
+
+@api.route("/match/completed")
+def api_match_completed():
+    args, success = require(id=int, mid=int, hash=str, data=str)
+
+    if not success:
+        return jsonify({
+            "success": False,
+            "msg": "Invalid Call"
+        })
+
+    try:
+        s = Server.get((Server.id == args.id) & (Server.hash == args.hash))
+    except Server.DoesNotExist:
+        return jsonify({
+            "success": False,
+            "msg": "Invalid ID or Hash"
+        })
+
+    try:
+        data = json.loads(args.data)
+    except:
+        log.error("Call to match-completed has invalid payload: `%s`" % args.data)
+        return jsonify({
+            "success": False,
+            "msg": "Invalid payload"
+        })
+
+    try:
+        m = Match.get(
+            (Match.server == s) &
+            (Match.state == MatchState.MATCH_STATE_PLAY) &
+            (Match.id == args.mid))
+    except Match.DoesNotExist:
+        return jsonify({
+            "success": False,
+            "msg": "Could not find a valid match"
+        })
+
+    m.state = MatchState.MATCH_STATE_FINISH
+    m.result = {}
+
+    # Mark this as unparsed for the match worker
+    m.result['parsed'] = False
+
+    # Store and set the files
+    m.result['files']['demo'] = STORAGE.storeFile(data['files']['demo'])
+    m.result['files']['log'] = STORAGE.storeFile(data['files']['log'])
+
+    # Store some data
+    m.result['teama'] = data['score']['teama']
+    m.result['teamb'] = data['score']['teamb']
+    m.save()
+
+@api.route("/match/file")
+def api_match_file():
+    args, success = require(id=int, type=str)
+
+    if not success:
+        return jsonify({
+            "success": False,
+            "msg": "Match files require an ID and type"
+        })
+
+    try:
+        m = Match.get((Match.id == args.id) & (Match.state == MatchState.MATCH_STATE_FINISH))
+    except Match.DoesNotExist:
+        return jsonify({
+            "success": False,
+            "msg": "Invalid match id"
+        })
+
+    if args.type not in ['demo', 'log']:
+        return jsonify({
+            "success": False,
+            "msg": "Invalid file type"
+        })
+
+    if args.type in m.result['files'].keys():
+        return send_file(STORAGE.getFile(m.result['files'][args.type]),
+            mimetype='application/octet-stream')
+
+    return jsonify({
+        "success": False,
+        "msg": "Match does not have file for that type"
+    })
+
+"""
+NB: forum code is WIP
+"""
 
 @api.route("/forum/list")
 def api_forum_list():

@@ -46,6 +46,7 @@ public OnPluginStart() {
     GetConVarString(gp_players, PLAYERS, sizeof(PLAYERS));
 
     LogMessage("Starting GOTV Demo...");
+
     // Use %d instead of %s to save a buffer
     ServerCommand("tv_record match_%d\n", GetConVarInt(gp_matchid));
 
@@ -61,6 +62,7 @@ public OnPluginStart() {
     HookEvent("bomb_dropped", Event_BombDropped, EventHookMode_Post);
     HookEvent("bomb_pickup", Event_BombPickup, EventHookMode_Post);
     HookEvent("announce_phase_end", HookHalftime, EventHookMode_Post);
+    HookEvent("cs_win_panel_match", HookMatchEnd, EventHookMode_Post);
 
     AddCommandListener(HookJoinTeam, "jointeam");
 
@@ -77,7 +79,7 @@ public OpenSocket() {
 
 public OnSocketConnected(Handle:s, any:arg) {}
 
-// TODO: invesitage chunking size of this
+// TODO: investigate chunking size of this
 public OnSocketReceive(Handle:s, String:recv[], const dataSize, any:arg) {
     return 0;
 }
@@ -143,9 +145,9 @@ public OnClientConnected(client) {
     if (!IsClientConnected(client) || IsFakeClient(client)) { return; }
 
     if (StrContains(TEAMA, buffer) <= 0) {
-        ChangeClientTeam(client, TEAM_TEAM);
+        CS_SwitchTeam(client, TEAM_TEAM);
     } else {
-        ChangeClientTeam(client, (TEAM_TEAM == 1 ? 2 : 1));
+        CS_SwitchTeam(client, (TEAM_TEAM == 1 ? 2 : 1));
     }
 }
 
@@ -153,10 +155,39 @@ public Action:HookJoinTeam(client, const String:command[], argc) {
     return Plugin_Handled;
 }
 
-// TODO: will the teams autoswitch?
+// Handles half time switching of teams
 public Action:HookHalftime(Handle:event, const String:name[], bool:dontBroadcast) {
     TEAM_TEAM = 2;
+    for (new client = 1; client <= MaxClients; client++) {
+        if(IsValidClient(client) || IsBot(client)) {
+            SwapClient(client)
+        }
+    }
 }
+
+// Handles match end
+// TODO: this should post the winner and stats (big payload) to the wrapper
+public Action:HookMatchEnd(Handle:event, const String:name[], bool:dontBroadcast) {
+    decl String:buffer[2048];
+    Format(buffer, sizeof(buffer), "9999")
+    LogLine(buffer);
+    return Plugin_Continue;
+}
+
+// Switches a clients team
+SwapClient(client) {
+    new team = GetClientTeam(client);
+
+    if(team == CS_TEAM_CT) {
+        CS_SwitchTeam(client,CS_TEAM_T);
+        SetEntityModel(client,modelT[GetRandomInt(0,3)]);
+    } else if(team == CS_TEAM_T) {
+        CS_SwitchTeam(client,CS_TEAM_CT);
+        SetEntityModel(client,modelCT[GetRandomInt(0,3)]);
+    }
+}
+
+// -- SOCKET LOGGERS --
 
 public Action:Event_PlayerConnect(Handle:event, const String:name[], bool:dontBroadcast) {
     // Log the player connect message

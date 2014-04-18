@@ -6,7 +6,10 @@ class Connection(object):
         self.master = master
         self.conn = conn
         self.addr = addr
-        self.parser = GameParser(self.master.id)
+        self.parser = GameParser(self, self.master.id)
+
+    def end(self):
+        self.master.endMatch()
 
     def push(self, data):
         print "Sending: `%s`" % data
