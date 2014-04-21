@@ -5,7 +5,9 @@ from PIL import Image
 from StringIO import StringIO
 from storage import STORAGE
 import json, requests, logging
+from steam import SteamAPI
 
+steam = SteamAPI.new()
 log = logging.getLogger(__name__)
 api = Blueprint('api', __name__, url_prefix='/api')
 
@@ -555,6 +557,13 @@ def api_users_friend():
             "msg": "Already friends with that user!"
         })
 
+    bans = list(u.getActiveBans())
+    if len(bans) and any(map(lambda i: not i.end, bans)):
+        return jsonify({
+            "success": False,
+            "msg": "You cannot friend a permanently banned user!"
+        })
+
     waiting = Invite.select().where(
         (Invite.getQuery(g.user, u)) &
         (Invite.state == InviteState.INVITE_WAITING))
@@ -656,6 +665,39 @@ def api_users_friends():
         "success": True,
         "friends": data
     })
+
+@api.route("/users/avatar")
+@limit(120)
+def api_users_avatar():
+    args, success = require(id=int)
+
+    if not success:
+        return "", 400
+
+    try:
+        u = User.get(User.id == args.id)
+    except User.DoesNotExist:
+        return "", 404
+
+    key = "user:avatar:%s" % u.id
+    if redis.exists(key):
+        buffered = StringIO(redis.get(key))
+    else:
+        data = steam.getUserInfo(u.steamid)
+        print u.steamid
+
+        try:
+            r = requests.get(data.get('avatarfull'))
+            r.raise_for_status()
+        except:
+            return "", 500
+
+        # Cached for 15 minutes
+        buffered = StringIO(r.content)
+        redis.setex(key, r.content, (60 * 15))
+
+    buffered.seek(0)
+    return send_file(buffered, mimetype="image/jpeg")
 
 @api.route("/invites/accept", methods=['POST'])
 @authed()

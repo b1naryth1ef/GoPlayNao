@@ -1,3 +1,4 @@
+{% set bans = user.getActiveBans() %}
 {% extends "base.html" %} {% block content %}
 <div class="container" style="fixed-header">
     <div class="row">
@@ -10,13 +11,18 @@
                             <div class="list-group">
                                 <ul>
                                     <li class="list-group-item no-padding">
-                                    <img alt="" src="http://files.gamebanana.com/img/ico/sprays/52b78555c046f.png" height="500px" width="500px"></li>
+                                    <img alt="" src="/api/users/avatar?id={{ user.id }}" height="500px" width="500px"></li>
 
                                     <li style="list-style: none">
-                                        <a class="list-group-item"><h1>{{ user.username | title }}</h1></a>
-                                        <a class="list-group-item">View Matches</a>
-                                        <a class="list-group-item">Add Friend</a>
-                                        <a class="list-group-item">Report</a>
+                                        <a class="list-group-item"><h1>{{ user.username }}</h1></a>
+                                        <a class="list-group-item" href="http://steamcommunity.com/profiles/{{ user.steamid }}">Steam Profile</a>
+                                        {# User exists, is not current user, and does not have a perma-ban #}
+                                        {% if g.user and g.user != user and not (bans.count() and not bans[0].end) %}
+                                            {% if not g.user.isFriendsWith(user)%}
+                                                <a class="list-group-item" id="add-friend">Add Friend</a>
+                                            {% endif %}
+                                            <a class="list-group-item">Report</a>
+                                        {% endif %}
                                     </li>
                                 </ul>
                             </div>
@@ -33,11 +39,10 @@
 
                             <div class="row profile-info">
                                 <div class="col-md-7">
-                                    {% set bans = user.getActiveBans() %}
                                     {% if bans.count() %}
                                         {% set ban = bans[0] %}
                                         <div class="alert alert-danger">
-                                            This user is banned until {{ ban.getDurationString() }} for "{{ ban.reason }}"!
+                                            This user is banned{% if ban.end %} until{%endif %} {{ ban.getDurationString() }} for "{{ ban.reason }}"!
                                         </div>
                                     {% endif %}
 
@@ -63,7 +68,7 @@
 </div>
 
 <script>
-pug.profile({{ user.format()|json|safe }})
+    pug.profile({{ user.format()|json|safe }})
 </script>
 
 {% endblock %}

@@ -722,12 +722,7 @@ var pug = {
 
                 // Render ban rows
                 _.each(data.bans, function (ban) {
-                    if (ban.steamid) {
-                        url = "steamcommunity.com/profiles/"+ban.steamid
-                    } else {
-                        url = "/u/"+ban.user.id
-                    }
-                    $(".bans-list").append(JST.ban_row({ban: ban, url:url}))
+                    $(".bans-list").append(JST.ban_row({ban: ban, url:"/u/"+ban.user.id}))
                 })
             }
         })
@@ -774,6 +769,21 @@ var pug = {
                     graph_drawPlayerOverview(data.stats, "#profile-graph-overview")
                 }
             }
+        })
+
+        $("#add-friend").click(function (e) {
+            $.ajax("/api/users/friend", {
+                data: {
+                    id: u.id
+                },
+                success: function (data) {
+                    if (data.success) {
+                        alert("Friend request sent!")
+                    } else {
+                        alert("Error adding friend: "+data.msg)
+                    }
+                }
+            })
         })
     },
 }

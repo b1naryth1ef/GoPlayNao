@@ -24,8 +24,6 @@ def public_lobby(id=None):
 
         # LOL SILLY, you can't be in more than one lobby at a time! Duh!
         for lob in Lobby.select().where((Lobby.members.contains(g.user.id)) & (Lobby.id != id)):
-            # I'm not sure if this is technically correct, does members
-            #  contain /active/ members or all members? W/e.
             lob.userLeave(g.user)
 
         lobby.joinLobby(g.user)
@@ -45,7 +43,10 @@ def public_friends():
 @public.route("/u/<user>")
 def public_user(user=None):
     try:
-        u = User.get((User.username ** user) | (User.id == user))
+        base_q = (User.username ** user)
+        if user.isdigit():
+            base_q |= (User.id == user)
+        u = User.get(base_q)
     except User.DoesNotExist:
         return flashy("No such user!")
 

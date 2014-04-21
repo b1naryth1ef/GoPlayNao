@@ -114,8 +114,6 @@ def dump_sourcepawn(events):
 def dump_events(events):
     dump_sourcepawn(events)
 
-
-
 if __name__ == '__main__':
     if len(sys.argv) <= 1:
         print "Usage: ./event_builder.py <event_file.html>"

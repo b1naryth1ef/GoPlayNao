@@ -21,6 +21,14 @@ def schedule(**kwargs):
 
 LOBBY_TIMEOUT = 15
 
+@schedule(hours=4)
+def task_update_names():
+    """
+    Updates all usernames in the system
+    """
+    for user in User.select().where():
+        user.updateName()
+
 @schedule(seconds=5)
 def task_user_timeout():
     return

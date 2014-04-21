@@ -325,7 +325,6 @@ SwapClient(client) {
 }
 
 // -- SOCKET LOGGERS --
-
 public Action:Event_player_connect(Handle:event, const String:name[], bool:dontBroadcast) {
     decl String:buffer[2048];
     decl String:buff_name[64];

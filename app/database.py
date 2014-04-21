@@ -67,13 +67,21 @@ class User(BaseModel, Entity):
             u.save()
         return u
 
+    def updateName(self):
+        data = steam.getUserInfo(self.steamid)
+        self.username = data['personaname']
+        self.save()
+
+    def getActiveBansQuery(self):
+        return (Ban.getActiveBanQuery() &
+                    ((Ban.user == self.id) | (Ban.steamid == self.steamid)))
+
     def getActiveBans(self):
         """
         Returns an active ban query which returns all active bans for this user,
         in order of the end date.
         """
-        return Ban.select().where(Ban.getActiveBanQuery() &
-                    ((Ban.user == self.id) | (Ban.steamid == self.steamid))).order_by(Ban.end)
+        return Ban.select().where(self.getActiveBansQuery()).order_by(Ban.end)
 
     def isOnline(self):
         """
@@ -241,6 +249,8 @@ class Lobby(BaseModel):
         if self.owner == user:
             return True
 
+        # This is here to handle cases where users refresh the lobby page
+        #  and we don't want to query the penis off of invites.
         if user.id in self.members:
             return True
 
