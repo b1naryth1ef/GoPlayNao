@@ -1,0 +1,812 @@
+Name:    player_connect
+Structure:  
+string   name    player name
+byte     index   player slot (entity index-1)
+short    userid  user ID on server (unique on server)
+string   networkid   player network (i.e steam) id
+string   address     ip:port
+short    bot     is a bot
+
+Name:    player_disconnect
+Structure:  
+short    userid  user ID on server
+string   reason  "self", "kick", "ban", "cheat", "error"
+string   name    player name
+string   networkid   player network (i.e steam) id
+short    bot     is a bot
+
+Name:    player_activate
+Structure:  
+short    userid  user ID on server
+
+Name:    player_say
+Structure:  
+short    userid  user ID on server
+string   text    the say text
+
+Name:    team_info
+Structure:  
+byte     teamid  unique team id
+string   teamname    team name eg "Team Blue"
+
+Name:    team_score
+Structure:  
+byte     teamid  team id
+short    score   total team score
+
+Name:    teamplay_broadcast_audio
+Structure:  
+byte     team    unique team id
+string   sound   name of the sound to emit
+
+Name:    player_team
+Structure:  
+short    userid  user ID on the server
+byte     team    team id
+byte     oldteam     old team id
+bool     disconnect  team change because player disconnects
+bool     autoteam    true if the player was auto assigned to the team (OB only)
+bool     silent  if true wont print the team join messages (OB only)
+string   name    player's name (OB only)
+
+Name:    player_class
+Structure:  
+short    userid  user ID on server
+string   class   new player class / model
+
+Name:    player_chat
+Structure:  
+bool     teamonly    true if team only chat
+short    userid  chatting player
+string   text    chat text
+
+Name:    player_score
+Structure:  
+short    userid  user ID on server
+short    kills   # of kills
+short    deaths  # of deaths
+short    score   total game score
+
+Name:    player_spawn
+Structure:  
+short    userid  user ID on server
+
+Name:    player_shoot
+Structure:  
+short    userid  user ID on server
+byte     weapon  weapon ID
+byte     mode    weapon mode
+
+Name:    player_use
+Structure:  
+short    userid  user ID on server
+short    entity  entity used by player
+
+Name:    player_changename
+Structure:  
+short    userid  user ID on server
+string   oldname     players old (current) name
+string   newname     players new name
+
+Name:    player_hintmessage
+Structure:  
+string   hintmessage     localizable string of a hint
+
+Name:    base_player_teleported
+Structure:  
+short    entindex   
+
+Name:    game_newmap
+Structure:  
+string   mapname     map name
+
+Name:    game_start
+Structure:  
+long     roundslimit     max round
+long     timelimit   time limit
+long     fraglimit   frag limit
+string   objective   round objective
+
+Name:    game_end
+Structure:  
+byte     winner  winner team/user id
+
+Name:    game_message
+Structure:  
+byte     target  0 console, 1 HUD
+string   text    the message text
+
+Name:    break_breakable
+Structure:  
+long     entindex    index of the entity
+short    userid  userid who broke the entity
+byte     material    BREAK_GLASS, BREAK_WOOD, etc
+
+Name:    break_prop
+Structure:  
+long     entindex    index of the entity
+short    userid  userid who broke the entity
+
+Name:    entity_killed
+Structure:  
+long     entindex_killed     index of the killed entity
+long     entindex_attacker   index of the attacker
+long     entindex_inflictor  index of the inflictor (weapon id, etc)
+long     damagebits  the damagebits of the attack
+
+Name:    bonus_updated
+Structure:  
+short    numadvanced    
+short    numbronze  
+short    numsilver  
+short    numgold    
+
+Name:    achievement_increment
+Structure:  
+long     achievement_id  ID of achievement that went up
+short    cur_val     # of steps toward achievement
+short    max_val     total # of steps in achievement
+
+Name:    physgun_pickup
+Structure:  
+long     entindex    entity picked up
+
+Name:    flare_ignite_npc
+Structure:  
+long     entindex    entity ignited
+
+Name:    vote_cast
+Structure:  
+byte     vote_option     which option the player voted on
+short    team   
+long     entityid    entity id of the voter
+
+Name:    player_info
+Structure:  
+string   name    player name
+byte     index   player slot (entity index-1)
+short    userid  user ID on server (unique on server)
+string   networkid   player network (i.e steam) id
+bool     bot     true if player is a AI bot
+
+Name:    player_death
+Structure:  
+short    userid  user ID who died
+short    attacker    user ID who killed
+short    assister    user ID who assisted in the kill
+string   weapon  weapon name killer used
+bool     headshot    singals a headshot
+short    dominated   did killer dominate victim with this kill
+short    revenge     did killer get revenge on victim with this kill
+short    penetrated  number of objects shot penetrated before killing target
+
+Name:    player_hurt
+Structure:  
+short    userid  user ID who was hurt
+short    attacker    user ID who attacked
+byte     health  remaining health points
+byte     armor   remaining armor points
+string   weapon  weapon name attacker used, if not the world
+short    dmg_health  damage done to health
+byte     dmg_armor   damage done to armor
+byte     hitgroup    hitgroup that was damaged
+
+Name:    item_purchase
+Structure:  
+short    userid 
+short    team   
+string   weapon
+
+Name:    bomb_beginplant
+Structure:  
+short    userid  player who is planting the bomb
+short    site    bombsite index
+
+Name:    bomb_abortplant
+Structure:  
+short    userid  player who is planting the bomb
+short    site    bombsite index
+
+Name:    bomb_planted
+Structure:  
+short    userid  player who planted the bomb
+short    site    bombsite index
+
+Name:    bomb_defused
+Structure:  
+short    userid  player who defused the bomb
+short    site    bombsite index
+
+Name:    bomb_exploded
+Structure:  
+short    userid  player who planted the bomb
+short    site    bombsite index
+
+Name:    bomb_dropped
+Structure:  
+short    userid  player who dropped the bomb
+long     entindex   
+
+Name:    bomb_pickup
+Structure:  
+short    userid  player who picked up the bomb
+
+Name:    defuser_dropped
+Structure:  
+long     entityid    defuser's entity ID
+
+Name:    defuser_pickup
+Structure:  
+long     entityid    defuser's entity ID
+short    userid  player who picked up the defuser
+
+Name:    announce_phase_end
+Structure:  
+none    none    
+
+Name:    cs_intermission
+Structure:  
+none    none
+
+Name:    bomb_begindefuse
+Structure:  
+short    userid  player who is defusing
+bool     haskit 
+
+Name:    bomb_abortdefuse
+Structure:  
+short    userid  player who was defusing
+
+Name:    hostage_follows
+Structure:  
+short    userid  player who touched the hostage
+short    hostage     hostage entity index
+
+Name:    hostage_hurt
+Structure:  
+short    userid  player who hurt the hostage
+short    hostage     hostage entity index
+
+Name:    hostage_killed
+Structure:  
+short    userid  player who killed the hostage
+short    hostage     hostage entity index
+
+Name:    hostage_rescued
+Structure:  
+short    userid  player who rescued the hostage
+short    hostage     hostage entity index
+short    site    rescue site index
+
+Name:    hostage_stops_following
+Structure:  
+short    userid  player who rescued the hostage
+short    hostage     hostage entity index
+
+Name:    hostage_rescued_all
+Structure:  
+none    none    
+
+Name:    hostage_call_for_help
+Structure:  
+short    hostage     hostage entity index
+
+Name:    vip_escaped
+Structure:  
+short    userid  player who was the VIP
+
+Name:    vip_killed
+Structure:  
+short    userid  player who was the VIP
+short    attacker    user ID who killed the VIP
+
+Name:    player_radio
+Structure:  
+short    userid 
+short    slot
+
+Name:    bomb_beep
+Structure:  
+long     entindex    c4 entity
+
+Name:    weapon_fire
+Structure:  
+short    userid 
+string   weapon  weapon name used
+bool     silenced    is weapon silenced
+
+Name:    weapon_fire_on_empty
+Structure:  
+short    userid 
+string   weapon  weapon name used
+
+Name:    weapon_outofammo
+Structure:  
+short    userid 
+
+Name:    weapon_reload
+Structure:  
+short    userid 
+
+Name:    weapon_zoom
+Structure:  
+short    userid
+
+Name:    silencer_detach
+Structure:  
+short    userid 
+
+Name:    inspect_weapon
+Structure:  
+short    userid
+
+Name:    weapon_zoom_rifle
+Structure:  
+short    userid 
+
+Name:    player_spawned
+Structure:  
+short    userid 
+bool     inrestart   true if restart is pending
+
+Name:    item_pickup
+Structure:  
+short    userid 
+string   item    either a weapon such as 'tmp' or 'hegrenade', or an item such as 'nvgs'
+
+Name:    ammo_pickup
+Structure:  
+short    userid 
+string   item    either a weapon such as 'tmp' or 'hegrenade', or an item such as 'nvgs'
+long     index   the weapon entindex
+
+Name:    item_equip
+Structure:  
+short    userid 
+string   item    either a weapon such as 'tmp' or 'hegrenade', or an item such as 'nvgs'
+bool     canzoom    
+bool     hassilencer    
+bool     issilenced 
+bool     hastracers 
+short    weptype     see below
+none    none     WEAPONTYPE_UNKNOWN = -1
+none    none     WEAPONTYPE_KNIFE = 0
+none    none     WEAPONTYPE_PISTOL = 1
+none    none     WEAPONTYPE_SUBMACHINEGUN = 2
+none    none     WEAPONTYPE_RIFLE = 3
+none    none     WEAPONTYPE_SHOTGUN = 4
+none    none     WEAPONTYPE_SNIPER_RIFLE = 5
+none    none     WEAPONTYPE_MACHINEGUN = 6
+none    none     WEAPONTYPE_C4 = 7
+none    none     WEAPONTYPE_GRENADE = 8
+bool     ispainted  
+
+Name:    enter_buyzone
+Structure:  
+short    userid 
+bool     canbuy
+
+Name:    exit_buyzone
+Structure:  
+short    userid 
+bool     canbuy 
+
+Name:    buytime_ended
+Structure:  
+none    none    
+
+Name:    enter_bombzone
+Structure:  
+short    userid 
+bool     hasbomb    
+bool     isplanted  
+
+Name:    exit_bombzone
+Structure:  
+short    userid 
+bool     hasbomb    
+bool     isplanted  
+
+Name:    enter_rescue_zone
+Structure:  
+short    userid 
+
+Name:    exit_rescue_zone
+Structure:  
+short    userid
+
+Name:    silencer_off
+Structure:  
+short    userid 
+
+Name:    silencer_on
+Structure:  
+short    userid
+
+Name:    buymenu_open
+Structure:  
+short    userid
+
+Name:    buymenu_close
+Structure:  
+short    userid
+
+Name:    round_prestart
+Structure:  
+none    none    
+
+Name:    round_poststart
+Structure:  
+none    none    
+
+Name:    round_start
+Structure:  
+long     timelimit   round time limit in seconds
+long     fraglimit   frag limit in seconds
+string   objective   round objective
+
+Name:    round_end
+Structure:  
+byte     winner  winner team/user i
+byte     reason  reson why team won
+string   message     round end round message
+
+Name:    grenade_bounce
+Structure:  
+short    userid 
+
+Name:    hegrenade_detonate
+Structure:  
+short    userid 
+short    entityid   
+float    x  
+float    y  
+float    z
+
+Name:    flashbang_detonate
+Structure:  
+short    userid 
+short    entityid   
+float    x  
+float    y  
+float    z
+
+Name:    smokegrenade_detonate
+Structure:  
+short    userid 
+short    entityid   
+float    x  
+float    y  
+float    z
+
+Name:    smokegrenade_expired
+Structure:  
+short    userid 
+short    entityid   
+float    x  
+float    y  
+float    z
+
+Name:    molotov_detonate
+Structure:  
+short    userid 
+float    x  
+float    y  
+float    z
+
+Name:    decoy_detonate
+Structure:  
+short    userid 
+short    entityid   
+float    x  
+float    y  
+float    z
+
+Name:    decoy_started
+Structure:  
+short    userid 
+short    entityid   
+float    x  
+float    y  
+float    z
+
+Name:    inferno_startburn
+Structure:  
+short    entityid   
+float    x  
+float    y  
+float    z
+
+Name:    inferno_expire
+Structure:  
+short    entityid   
+float    x  
+float    y  
+float    z
+
+Name:    inferno_extinguish
+Structure:  
+short    entityid   
+float    x  
+float    y  
+float    z
+
+Name:    decoy_firing
+Structure:  
+short    userid 
+short    entityid   
+float    x  
+float    y  
+float    z
+
+Name:    bullet_impact
+Structure:  
+short    userid 
+float    x  
+float    y  
+float    z
+
+Name:    player_footstep
+Structure:  
+short    userid 
+
+Name:    player_jump
+Structure:  
+short    userid 
+
+Name:    player_blind
+Structure:  
+short    userid 
+
+Name:    player_falldamage
+Structure:  
+short    userid 
+float    damage
+
+Name:    door_moving
+Structure:  
+long     entindex   
+short    userid
+
+Name:    round_freeze_end
+Structure:  
+none    none    
+
+Name:    mb_input_lock_success
+Structure:  
+none    none
+
+Name:    mb_input_lock_cancel
+Structure:  
+none    none
+
+Name:    nav_blocked
+Structure:  
+long     area   
+bool     blocked
+
+Name:    nav_generate
+Structure:  
+none    none    
+
+Name:    player_stats_updated
+Structure:  
+bool     forceupload    
+
+Name:    achievement_info_loaded
+Structure:  
+none    none    
+
+Name:    spec_target_updated
+Structure:  
+byte     userid  entindex of the player
+
+Name:    hltv_changed_mode
+Structure:  
+long     oldmode    
+long     newmode    
+long     obs_target
+
+Name:    cs_game_disconnected
+Structure:  
+none    none 
+
+Name:    cs_win_panel_round
+Structure:  
+bool     show_timer_defend  
+bool     show_timer_attack  
+short    timer_time 
+byte     final_event     defined in cs_gamerules.h
+string   funfact_token  
+short    funfact_player 
+long     funfact_data1  
+long     funfact_data2  
+long     funfact_data3
+
+Name:    cs_win_panel_match
+Structure:  
+none    none     Well nothing defined in CS:GO but maybe it's the same as in CS:S
+
+Name:    cs_match_end_restart
+Structure:  
+none    none    
+
+Name:    cs_pre_restart
+Structure:  
+none    none    
+
+Name:    show_freezepanel
+Structure:  
+short    victim  endindex of the one who was killed
+short    killer  entindex of the killer entity
+short    hits_taken 
+short    damage_taken   
+short    hits_given 
+short    damage_given   
+
+Name:    hide_freezepanel
+Structure:  
+none    none    
+
+Name:    freezecam_started
+Structure:  
+none    none    
+
+Name:    player_avenged_teammate
+Structure:  
+short    avenger_id 
+short    avenged_player_id  
+
+Name:    achievement_earned
+Structure:  
+byte     player  entindex of the player
+short    achievement     achievement ID
+
+Name:    achievement_earned_local
+Structure:  
+short    achievement     achievement ID
+short    splitscreenplayer   splitscreen ID
+
+Name:    item_found
+Structure:  
+byte     player  entindex of the player
+byte     quality     quality of the item
+byte     method  method by which we acquired the item
+long     itemdef     the item definition index
+long     itemid  the item id in the players inventory
+
+Name:    match_end_conditions
+Structure:  
+long     frags  
+long     max_rounds 
+long     win_rounds 
+long     time
+
+Name:    round_mvp
+Structure:  
+short    userid 
+short    reason 
+
+Name:    player_decal
+Structure:  
+short    userid 
+
+Name:    teamplay_round_start
+Structure:  
+bool     full_reset 
+
+Name:    client_disconnect
+Structure:  
+none    none    
+
+Name:    switch_team
+Structure:  
+short    numPlayers  number of active players on both T and CT
+short    numSpectators   number of spectators
+short    avg_rank    average rank of human players
+short    numTSlotsFree  
+short    numCTSlotsFree
+
+Name:    write_profile_data
+Structure:  
+none    none    
+
+Name:    update_matchmaking_stats
+Structure:  
+none    none
+
+Name:    player_reset_vote
+Structure:  
+short    userid 
+short    vote   
+
+Name:    enable_restart_voting
+Structure:  
+bool     enable
+
+Name:    sfuievent
+Structure:  
+string   action 
+string   data   
+byte     slot
+
+Name:    start_vote
+Structure:  
+short    userid  user ID on server
+byte     type   
+short    vote_parameter 
+
+Name:    player_given_c4
+Structure:  
+short    userid  user ID who received the c4
+
+Name:    tr_player_flashbanged
+Structure:  
+short    userid  user ID of the player banged
+
+Name:    tr_highlight_ammo
+Structure:  
+short    userid  user ID of the player
+
+Name:    tr_mark_complete
+Structure:  
+short    complete   
+
+Name:    tr_mark_best_time
+Structure:  
+long     time   
+
+Name:    tr_exit_hint_trigger
+Structure:  
+none    none    
+
+Name:    bot_takeover
+Structure:  
+short    userid 
+short    botid  
+short    index  
+
+Name:    tr_show_finish_msgbox
+Structure:  
+short    userid  user ID of the player
+
+Name:    tr_show_exit_msgbox
+Structure:  
+short    userid  user ID of the player
+
+Name:    reset_player_controls
+Structure:  
+none    none    
+
+Name:    jointeam_failed
+Structure:  
+short    userid 
+byte     reason  0 = team_full
+
+Name:    teamchange_pending
+Structure:  
+short    userid 
+byte     toteam
+
+Name:    material_default_complete
+Structure:  
+none    none    
+
+Name:    cs_prev_next_spectator
+Structure:  
+bool     next
+
+Name:    cs_handle_ime_event
+Structure:  
+string   eventtype  
+wstring  eventdata  
+
+Name:    nextlevel_changed
+Structure:  
+string   nextlevel   weapon name killer used
+
+Name:    seasoncoin_levelup
+Structure:  
+short    player 
+short    category   
+short    rank
