@@ -138,20 +138,18 @@ public bool:OnClientConnect(client, String:msg[], maxlen) {
     return true;
 }
 
-public OnClientConnected(client) {
+public Action:HookJoinTeam(client, const String:command[], argc) {
+    if (!IsClientConnected(client) || IsFakeClient(client)) { return Plugin_Continue; }
+
     decl String:buffer[32];
     Format(buffer, sizeof(buffer), "%d", GetSteamAccountID(client));
 
-    if (!IsClientConnected(client) || IsFakeClient(client)) { return; }
-
+    // Force the player on a team
     if (StrContains(TEAMA, buffer) <= 0) {
         CS_SwitchTeam(client, TEAM_TEAM);
     } else {
         CS_SwitchTeam(client, (TEAM_TEAM == 1 ? 2 : 1));
     }
-}
-
-public Action:HookJoinTeam(client, const String:command[], argc) {
     return Plugin_Handled;
 }
 
