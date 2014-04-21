@@ -68,6 +68,9 @@ class User(BaseModel, Entity):
         return u
 
     def updateName(self):
+        """
+        Updates a username based on the users steam profile name
+        """
         data = steam.getUserInfo(self.steamid)
         self.username = data['personaname']
         self.save()
@@ -476,9 +479,6 @@ class Map(BaseModel):
     level = IntegerField(default=0)
     mtype = IntegerField()
 
-    def cache_image(self):
-        pass
-
     def format(self):
         return {
             "title": self.title,
@@ -545,6 +545,7 @@ class Match(BaseModel):
     lobbies = ArrayField(IntegerField)
     config = JSONField()
     server = ForeignKeyField(Server)
+    mapp = ForeignKeyField(Map)
     mtype = IntegerField(default=MatchType.MATCH_TYPE_LOBBY)
     state = IntegerField(default=MatchState.MATCH_STATE_PRE)
     size = IntegerField(default=10)
@@ -573,23 +574,19 @@ class Match(BaseModel):
             for player in lobby.members:
                 yield User.get(User.id == player)
 
-    # COPY
-    def getTeamA(self):
-        for lobby in self.teama:
+    def getTeam(self, team):
+        t = self.teama if team.lower() == "a" else self.teamb
+        for lobby in self.t:
             lobby = Lobby.get(Lobby.id == lobby)
             for player in lobby.members:
-                yield User.get(User.id == player)
+                yield User.get(User.id == player)       
 
-    # PASTE
-    def getTeamB(self):
-        for lobby in self.teamb:
-            lobby = Lobby.get(Lobby.id == lobby)
-            for player in lobby.members:
-                yield User.get(User.id == player)
+    def getTeamA(self): return self.getTeam("a")
+    def getTeamB(self): return self.getTeam("b")
 
     def setDefaultConfig(self):
         self.config = {
-            "map": "de_nuke"
+            "map": self.mapp.name
         }
 
     def format(self, forServer=False):

@@ -781,6 +781,7 @@ def api_match_info():
 
 # This is a backend call
 @api.route("/match/completed", methods=['POST'])
+@limit(5)
 def api_match_completed():
     args, success = require(id=int, mid=int, hash=str, data=str)
 
@@ -831,6 +832,7 @@ def api_match_completed():
     m.save()
 
 @api.route("/match/file")
+@limit(30)
 def api_match_file():
     args, success = require(id=int, type=str)
 

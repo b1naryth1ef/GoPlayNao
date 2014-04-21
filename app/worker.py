@@ -216,7 +216,7 @@ def get_base_round_stats():
         "method": None,
     }
 
-@scheduler(minutes=1)
+@schedule(minutes=1)
 def task_match_consumer():
     """
     Builds some stuff async after matches finish
@@ -380,10 +380,11 @@ class MatchFinder(object):
         m.lobbies = map(lambda i: i.id, teams[0]+teams[1])
         m.teama = map(lambda i: i.id, teams[0])
         m.teamb = map(lambda i: i.id, teams[1])
-        m.config = {"map": random.choice(list(maps))}
+        m.config = {}
         m.server = servers[0]
         m.state = MatchState.MATCH_STATE_PRE
         m.size = self.SIZE
+        m.mapp = Map.get(Map.id == random.choice(list(maps)))
         m.save()
         m.cleanup()
 
