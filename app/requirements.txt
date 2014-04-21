@@ -15,7 +15,7 @@ gevent-websocket==0.9.3
 greenlet==0.4.2
 itsdangerous==0.24
 lxml==3.3.5
-peewee==2.2.2
+peewee==2.2.3
 psycopg2==2.5.2
 pycparser==2.10
 pyquery==1.2.8
