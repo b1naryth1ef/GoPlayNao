@@ -16,6 +16,7 @@ class GameParser(object):
             log.error("Recieved unparseable packet: %s", packet)
             return
 
+        log.debug("Got packet: %s", args[0])
         if not args[0].isdigit():
             log.error("First attribute in packet is not an integer: %s", packet)
             return

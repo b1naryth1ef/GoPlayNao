@@ -8,8 +8,8 @@ class StorageEngine(object):
             os.mkdir(self.path)
 
     def storeFile(self, data):
-        id = uuid.uuid4()
-        path = os.path.join(self.path, str(id))
+        id = str(uuid.uuid4())
+        path = os.path.join(self.path, id)
 
         with open(path, "w") as f:
             f.write(data)

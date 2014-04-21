@@ -68,7 +68,7 @@ public OnPluginStart() {
     HookEvent("player_use", Event_player_use, EventHookMode_Post);
     HookEvent("player_changename", Event_player_changename, EventHookMode_Post);
     HookEvent("player_hintmessage", Event_player_hintmessage, EventHookMode_Post);
-    HookEvent("base_player_teleported", Event_base_player_teleported, EventHookMode_Post);
+    //HookEvent("base_player_teleported", Event_base_player_teleported, EventHookMode_Post);
     HookEvent("game_newmap", Event_game_newmap, EventHookMode_Post);
     HookEvent("game_start", Event_game_start, EventHookMode_Post);
     HookEvent("game_end", Event_game_end, EventHookMode_Post);
@@ -189,7 +189,7 @@ public OnPluginStart() {
     HookEvent("start_vote", Event_start_vote, EventHookMode_Post);
     HookEvent("player_given_c4", Event_player_given_c4, EventHookMode_Post);
     HookEvent("tr_player_flashbanged", Event_tr_player_flashbanged, EventHookMode_Post);
-    HookEvent("tr_highlight_ammo", Event_tr_highlight_ammo, EventHookMode_Post);
+    //HookEvent("tr_highlight_ammo", Event_tr_highlight_ammo, EventHookMode_Post);
     HookEvent("tr_mark_complete", Event_tr_mark_complete, EventHookMode_Post);
     HookEvent("tr_mark_best_time", Event_tr_mark_best_time, EventHookMode_Post);
     HookEvent("tr_exit_hint_trigger", Event_tr_exit_hint_trigger, EventHookMode_Post);
@@ -212,6 +212,7 @@ public OnPluginStart() {
 
 // Opens a new socket
 public OpenSocket() {
+    LogMessage("Socket opened!");
     socket = SocketCreate(SOCKET_TCP, OnSocketError);
     decl String:host_buff[256];
     GetConVarString(gp_host, host_buff, sizeof(host_buff));
@@ -287,8 +288,10 @@ public Action:HookJoinTeam(client, const String:command[], argc) {
 
     // Force the player on a team
     if (StrContains(TEAMA, buffer) <= 0) {
+        LogMessage("Putting on TEAMA");
         CS_SwitchTeam(client, TEAM_TEAM);
     } else {
+        LogMessage("Putting on TEAMB");
         CS_SwitchTeam(client, (TEAM_TEAM == 1 ? 2 : 1));
     }
     return Plugin_Handled;
@@ -527,17 +530,6 @@ public Action:Event_player_hintmessage(Handle:event, const String:name[], bool:d
         buff_hintmessage);
     LogLine(buffer);
 }
-
-
-
-public Action:Event_base_player_teleported(Handle:event, const String:name[], bool:dontBroadcast) {
-    decl String:buffer[2048];
-
-    Format(buffer, sizeof(buffer), "16,%d",
-        GetEventInt(event, "entindex"));
-    LogLine(buffer);
-}
-
 
 
 public Action:Event_game_newmap(Handle:event, const String:name[], bool:dontBroadcast) {
@@ -1910,16 +1902,6 @@ public Action:Event_tr_player_flashbanged(Handle:event, const String:name[], boo
     decl String:buffer[2048];
 
     Format(buffer, sizeof(buffer), "136,%d",
-        GetEventInt(event, "userid"));
-    LogLine(buffer);
-}
-
-
-
-public Action:Event_tr_highlight_ammo(Handle:event, const String:name[], bool:dontBroadcast) {
-    decl String:buffer[2048];
-
-    Format(buffer, sizeof(buffer), "137,%d",
         GetEventInt(event, "userid"));
     LogLine(buffer);
 }

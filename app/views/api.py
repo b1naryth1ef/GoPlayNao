@@ -810,8 +810,9 @@ def api_match_completed():
 
     try:
         m = Match.get(
-            (Match.server == s) &
-            (Match.state == MatchState.MATCH_STATE_PLAY) &
+            # for testing
+            #(Match.server == s) &
+            #(Match.state == MatchState.MATCH_STATE_PLAY) &
             (Match.id == args.mid))
     except Match.DoesNotExist:
         return jsonify({
@@ -820,7 +821,7 @@ def api_match_completed():
         })
 
     m.state = MatchState.MATCH_STATE_FINISH
-    m.result = {}
+    m.result = {'files':{}}
 
     # Mark this as unparsed for the match worker
     m.result['parsed'] = False

@@ -92,10 +92,6 @@ Name:    player_hintmessage
 Structure:  
 string   hintmessage     localizable string of a hint
 
-Name:    base_player_teleported
-Structure:  
-short    entindex   
-
 Name:    game_newmap
 Structure:  
 string   mapname     map name
@@ -743,10 +739,6 @@ short    userid  user ID who received the c4
 Name:    tr_player_flashbanged
 Structure:  
 short    userid  user ID of the player banged
-
-Name:    tr_highlight_ammo
-Structure:  
-short    userid  user ID of the player
 
 Name:    tr_mark_complete
 Structure:  

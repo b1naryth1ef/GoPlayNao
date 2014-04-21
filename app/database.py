@@ -179,7 +179,7 @@ class Server(BaseModel):
         return free
 
     def setup(self, match):
-        map_name = Map.get(Map.id == match.config['map']).name
+        map_name = match.mapp.name
         redis.publish("server-%s" % self.id, json.dumps({
             "tag": "match",
             "map": map_name,

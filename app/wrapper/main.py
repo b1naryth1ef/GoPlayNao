@@ -34,6 +34,7 @@ class Server(object):
         SOCKET_OFFSET += 1
         self.sockport = SOCKET_OFFSET
         self.server = start_server(self.sockport, self)
+        thread.start_new_thread(self.server.loop, ())
 
         self.match = None
 
@@ -44,9 +45,9 @@ class Server(object):
             "id": self.id,
             "hash": self.hash,
             "mid": self.match['id'],
-            "data": {
+            "data": json.dumps({
                 "files": files,
-            }
+            })
         })
         r.raise_for_status()
 
@@ -87,7 +88,7 @@ class Server(object):
         self.proc = subprocess.Popen(self.path + ' ' + ' '.join(self.args),
             stdout=subprocess.PIPE,
             stdin=subprocess.PIPE,
-            stderr=subprocess.PIPE)
+            stderr=subprocess.PIPE, shell=True)
         thread.start_new_thread(self.debug, (self.proc.stdout, ))
         thread.start_new_thread(self.debug, (self.proc.stderr, ))
 

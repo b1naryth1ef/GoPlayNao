@@ -13,11 +13,10 @@ m = Match()
 m.lobbies = [lobbyid]
 m.teama = [lobbyid]
 m.teamb = []
-m.config = {
-    "map": Map.get(Map.name == "de_nuke").id
-}
+m.config = {}
 m.server = Server.get(Server.id == 1)
 m.state = MatchState.MATCH_STATE_SETUP
+m.mapp = Map.get(Map.name == "de_nuke")
 m.save()
 m.cleanup()
 m.server.setup(m)
