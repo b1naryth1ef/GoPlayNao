@@ -683,6 +683,10 @@ class Forum(BaseModel):
     parent = ForeignKeyField("self", "children", null=True)
     category = BooleanField(default=False)
 
+    @classmethod
+    def getPermQuery(cls, view):
+        return (Forum.perm_view <= view)
+
     def format(self, as_level=0):
         data = {
             "title": self.title,
@@ -715,6 +719,10 @@ class ForumPost(BaseModel):
     locked = BooleanField(default=False)
     hidden = BooleanField(default=False)
     deleted = BooleanField(default=False)
+
+    @classmethod
+    def getThreadParentQuery(cls):
+        return (ForumPost.thread >> None)
 
     @classmethod
     def getValidQuery(cls):

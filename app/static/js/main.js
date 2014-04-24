@@ -33,7 +33,15 @@ var JST = {
 
     ban_row: _.template('<tr class="ban-row"><td><%= ban.id %></td>'+
         '<td><a href="<%= url %>"><%= ban.user.username %></a></td>'+
-        '<td><%= ban.reason %></td><td><%= ban.duration %></td></tr>')
+        '<td><%= ban.reason %></td><td><%= ban.duration %></td></tr>'),
+
+    forum_sidebar_header: _.template('<li class="list-group-item list-group-header"><%= cat.title %></li>'),
+    forum_sidebar_item: _.template('<a href="#" class="list-group-item"><%= item.title %></a>')
+    forum_thread: _.template('<div class="panel panel-default"><div class="panel-collapse collapse in">'+
+        '<div class="panel-body">'+
+        '<h3 style="margin-top: 0px; margin-bottom: 0px"><%= thread.title %></h3>'+
+        '<b>Posted <%= thread.time %> ago by <a href="/u/0"><%= thread.author %></a></b>'+
+        '</div></div></div>')
 
 }
 
@@ -786,6 +794,70 @@ var pug = {
             })
         })
     },
+
+    forums: function(fid, tid) {
+        pug.forum_data = {
+            forum: fid,
+            thread: tid,
+            page: 1,
+        }
+
+        if (pug.forum_data.thread) {
+            pug.forum_load_thread()
+        } else if (pug.forum_data.forum) {
+
+        }
+
+        pug.forum_load_sidebar()
+
+        // TODO: click sidebar
+    },
+
+    forum_load_single: function () {
+        $("/api/forum/threads/list", {
+            data: {
+                id: pug.forum_data.forum,
+                page: pug.forum_data.forum
+            },
+            success: function (data) {
+
+            }
+        })
+    },
+
+    forum_load_thread: function() {
+        $("/api/forum/threads/get", {
+            data: {
+                id: pug.forum_data.thread,
+                page: pug.forum_data.page
+            },
+            success: function (data) {
+
+            }
+        })
+    },
+
+    forum_load_sidebar: function() {
+        $.ajax("/api/forum/list", {
+            success: function (data) {
+                _.each(data.forums, function (forum) {
+                    $("#forum-sidebar").append(
+                        JST.forum_sidebar_header({
+                            cat: forum
+                        })
+                    )
+
+                    _.each(forum.children, function (child) {
+                        $("#forum-sidebar").append(
+                            JST.forum_sidebar_item({
+                                item: child
+                            })
+                        )
+                    })
+                })
+            }
+        })
+    }
 }
 
 $(document).ready(function () {

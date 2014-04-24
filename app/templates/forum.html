@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.panel {
+    margin-bottom: 1px;
+}
+</style>
+
+<div class="container" style="fixed-header">
+    <div class="page-header">
+        <div class="page-title" style="padding: 0px;">
+        {% if not forum and not post %}
+            <h1>Forums</h1>
+        {% elif forum and not post %}
+            <h1>{{ forum.title }}</h1>
+        {% else %}
+            <h1>{{ forum.title }} -- {{ post.title }}</h1>
+        {% endif %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-2">
+            <div class="list-group" id="forum-sidebar"></div>
+        </div>
+        <div class="col-md-10">
+            {% if forum and not post %}
+                <div id="forum-threads"></div>
+            {% endif %}
+
+            {% if forum and post %}
+                <h1> TODO </h1>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    pug.vglobal()
+    pug.forums()
+</script>
+{% endblock %}

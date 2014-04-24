@@ -128,6 +128,9 @@
                     {% else %}
                         <li><a href="#"><i class="icon-group"></i>Recent Matches</a></li>
                     {% endif %}
+                    <li {% if request.path.startswith("/forum") %} class="current" {% endif %}>
+                        <a href="/forum"><i class="icon-comments"></i>Forum</a>
+                    </li>
                     <li {% if request.path.startswith("/bans") %}  class="current" {% endif %}><a href="/bans"><i class="icon-remove"></i>Banlist</a></li>
                 </ul>
                 {% if g.user %}

@@ -74,3 +74,38 @@ def public_match(id):
         return flashy("You do not have permission to view that!")
 
     return render_template("match.html", match=id)
+
+@public.route("/forum")
+def public_forum_index():
+    return render_template("forum.html")
+
+@public.route("/forum/<fid>")
+def public_forum_single(fid):
+    level = g.user.level if g.user else 0
+
+    try:
+        forum = Forum.get((Forum.id == fid) & Forum.getPermQuery(level))
+    except Forum.DoesNotExist:
+        return flashy("Invalid Forum!")
+
+    return render_template("forum.html", forum=forum)
+
+@public.route("/forum/<fid>/thread/<tid>")
+def public_forum_thread(fid, tid):
+    level = g.user.level if g.user else 0
+
+    try:
+        forum = Forum.get((Forum.id == fid) & Forum.getPermQuery(level))
+    except Forum.DoesNotExist:
+        return flashy("Invalid Forum!")
+
+    try:
+        post = ForumPost.get(
+            (ForumPost.forum == forum) &
+            ForumPost.getThreadParentQuery() &
+            ForumPost.getValidQuery() &
+            (ForumPost.id == tid))
+    except ForumPost.DoesNotExist:
+        return flashy("Invalid Forum Thread!")
+
+    return render_template("forum.html", forum=forum, post=post)

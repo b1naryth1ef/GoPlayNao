@@ -876,20 +876,21 @@ def api_forum_list():
 
     forums = map(lambda i: i.format(level), Forum.select().where(
         (Forum.perm_view <= level) &
-        (Forum.parent >> None)
+        (Forum.parent >> None) &
+        (Forum.category == True)
     ).order_by(Forum.order))
 
     return success({
         "forums": forums
     })
 
-@api.route("/forum/posts/list")
+@api.route("/forum/threads/list")
 def api_forum_posts_list():
     level = g.user.level if g.user else 0
     args, s = require(id=int, page=int)
 
     if not s:
-        return error("Forum post listing requires a forum id and page number")
+        return error("Forum thread listing requires a forum id and page number")
 
     posts = ForumPost.select().join(Forum).where(
         (ForumPost.forum == args.id) &
@@ -898,26 +899,26 @@ def api_forum_posts_list():
     ).paginate(args.page, 25)
 
     return success({
-        "posts": map(lambda i: i.format(level), posts),
+        "threads": map(lambda i: i.format(level), posts),
         "count": posts.count(),
         "page": args.page
     })
 
-@api.route("/forum/posts/get")
+@api.route("/forum/threads/get")
 def api_forum_posts_get():
     level = g.user.level if g.user else 0
     args, s = require(id=int, page=int)
 
     if not s:
-        return error("Forum thread listing requires post id and page number")
+        return error("Forum thread listing requires thread id and page number")
 
     try:
         post = ForumPost.get(ForumPost.id == args.id)
     except ForumPost.DoesNotExist:
-        return error("Invalid post id")
+        return error("Invalid thread id")
 
     if post.thread:
-        return error("Not a parent post!")
+        return error("Invalid thread!")
 
     if post.forum.perm_view < level:
         return error("You do not have permission to view that")
@@ -928,7 +929,7 @@ def api_forum_posts_get():
     ).paginate(args.page, 25)
 
     return success({
-        "posts": map(lambda i: i.format(level), posts),
+        "threads": map(lambda i: i.format(level), posts),
         "count": posts.count(),
         "page": args.page
     })
