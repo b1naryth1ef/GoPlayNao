@@ -8,8 +8,8 @@ class Connection(object):
         self.addr = addr
         self.parser = GameParser(self, self.master.id)
 
-    def end(self):
-        self.master.endMatch()
+    def end(self, data):
+        self.master.endMatch(data)
 
     def push(self, data):
         print "Sending: `%s`" % data

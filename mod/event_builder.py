@@ -2,7 +2,7 @@
 """
 Builds sourcepawn and python code based on a text file of events
 """
-import sys, os, time
+import sys, os, pprint
 
 BUILD = open("build.txt", "w")
 
@@ -111,13 +111,24 @@ def dump_sourcepawn(events):
             ",\n".join([i[1] for i in fmt])
         ))
 
+def dump_packet_details(events):
+    BUILD.write("\n\nPYTHON EVENTS:\n\n")
+    data = {}
+    for id, event in enumerate(events):
+        data[id] = {
+            "attrs": map(lambda i: i.name, event.attrs),
+            "name": event.name
+        }
+    BUILD.write(pprint.pformat(data))
+
 def dump_events(events):
     dump_sourcepawn(events)
+    dump_packet_details(events)
 
 if __name__ == '__main__':
     if len(sys.argv) <= 1:
         print "Usage: ./event_builder.py <event_file.html>"
         sys.exit(1)
-    events = parse_file(load_file(sys.argv[1   ]))
+    events = parse_file(load_file(sys.argv[1]))
     dump_events(events)
     BUILD.close()

@@ -1,3 +1,7 @@
+"""
+The worker is a simple schedule based job queue that fires off jobs on a
+regular basis to keep things up to date and running.
+"""
 import time, random, thread, json
 from steam import SteamAPI
 from database import *
@@ -10,10 +14,10 @@ schedules = {}
 
 s = SteamAPI.new()
 
-def burst(a):
-    return reduce(lambda a, b: a+b, a)
-
 def schedule(**kwargs):
+    """
+    Schedules a task
+    """
     def deco(f):
         schedules[f.__name__] = (datetime.utcnow(), relativedelta(**kwargs), f)
         return f
@@ -226,18 +230,13 @@ def task_match_consumer():
         Match.state == MatchState.MATCH_STATE_FINISH))
 
     for match in matches:
-        # Create a named tempfile
-        temp = tempfile.NamedTemporaryFile()
-
-        # Load in memory
         f = STORAGE.getFile(match.result['files']['log'])
+        data = json.load(f)
 
-        # Copy memory file into temp file (LOL UR PRO AT PRUGRMIN)
-        temp.write(f.read())
-
-        # Connect sqlite DB
-        db = sqlite3.connect(temp.name)
         match.result['stats'] = get_base_match_stats()
+
+        for event in data:
+            pass
 
         # TODO: fill in json stats
         # TODO: also make a chat log

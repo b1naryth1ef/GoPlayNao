@@ -27,6 +27,8 @@ steam = SteamAPI.new()
 app.register_blueprint(public)
 app.register_blueprint(api)
 
+STATE = 0
+
 @app.route("/login")
 @oid.loginhandler
 @limit(20)
@@ -70,6 +72,7 @@ def create_or_login(resp):
 @app.before_request
 def beforeRequest():
     g.user = None
+    g.state = STATE
 
     if request.path.startswith("/static"):
         return

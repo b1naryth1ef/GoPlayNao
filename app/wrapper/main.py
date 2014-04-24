@@ -51,12 +51,10 @@ class Server(object):
         })
         r.raise_for_status()
 
-    def endMatch(self):
+    def endMatch(self, data):
         self.kill()
 
         DEMO_PATH = os.path.join(BASE_PATH, "csgo", "match_%s.dem" % self.match['id'])
-        DB_PATH = "log_%s.db" % self.match['id']
-
         if not os.path.exists(DEMO_PATH):
             log.error("Demo does not exist: `%s`" % self.match)
             DEMO = ""
@@ -64,16 +62,9 @@ class Server(object):
             with open(DEMO_PATH) as f:
                 DEMO = f.read()
 
-        if not os.path.exists(DB_PATH):
-            log.error("DB does not exist: `%s`" % self.match)
-            DB = ""
-        else:
-            with open(DB_PATH) as f:
-                DB = f.read()
-
         self.sendMatchData({
             "demo": DEMO,
-            "log": DB
+            "log": data
         })
 
         self.match = {}

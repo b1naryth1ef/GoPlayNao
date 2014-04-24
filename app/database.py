@@ -44,7 +44,9 @@ class User(BaseModel, Entity):
     # Rank and impulse
     rank = IntegerField(default=0)
     impulse = FloatField(default=0)
-    stats = JSONField(default={})
+    stats = JSONField(default={
+        "achieve": {}
+    })
 
     @classmethod
     def steamGetOrCreate(cls, id):

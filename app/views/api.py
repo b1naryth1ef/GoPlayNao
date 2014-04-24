@@ -821,7 +821,7 @@ def api_match_completed():
         })
 
     m.state = MatchState.MATCH_STATE_FINISH
-    m.result = {'files':{}}
+    m.result = {'files': {}}
 
     # Mark this as unparsed for the match worker
     m.result['parsed'] = False
