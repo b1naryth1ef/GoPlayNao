@@ -6,9 +6,16 @@ from flask import request
 from steam import SteamAPI
 from util import human_readable, convert_steamid
 from util.impulse import Entity
-import bcrypt, json, redis, random, string, time
 
-db = PostgresqlExtDatabase('ns2pug', user="b1n", password="b1n", threadlocals=True)
+from util.badges import Badge, BADGE_BETA_TESTER
+
+import config
+
+import bcrypt, json, redis, random, string, time, logging
+
+
+log = logging.getLogger(__name__)
+db = PostgresqlExtDatabase('ns2pug', user="b1n", password="b1n", threadlocals=True, port=5433)
 redis = redis.Redis()
 steam = SteamAPI.new()
 
@@ -25,6 +32,11 @@ class BaseModel(Model):
 class UserLevel(object):
     USER_LEVEL_BASE = 0
     USER_LEVEL_ADMIN = 100
+
+# For beta, we only allow users in this array
+ALLOWED_USERS = [
+    "76561198037632722",
+]
 
 class User(BaseModel, Entity):
     username = CharField()
@@ -48,6 +60,9 @@ class User(BaseModel, Entity):
         "achieve": {}
     })
 
+    # Badges
+    badges = ArrayField(IntegerField, default=[])
+
     @classmethod
     def steamGetOrCreate(cls, id):
         """
@@ -59,6 +74,11 @@ class User(BaseModel, Entity):
         if ban is not None and ban < 365:
             raise Exception("User has VAC ban that is newer than a year!")
 
+        # During beta, only allow a set list of hardcoded steam id's
+        if config.IS_BETA:
+            if str(id) not in ALLOWED_USERS:
+                raise Exception("This user is not authorized to join the private beta!")
+
         try:
             u = User.get(User.steamid == str(id))
         except User.DoesNotExist:
@@ -67,7 +87,23 @@ class User(BaseModel, Entity):
             u.username = data['personaname']
             u.steamid = id
             u.save()
+
+        if config.IS_BETA:
+            u.award_badge(BADGE_BETA_TESTER)
+
         return u
+
+    def award_badge(self, badge):
+        if not isinstance(badge, Badge):
+            raise Exception("Value %s is not a badge!" % badge)
+
+        if badge in self.badges:
+            log.warning("Cannot award previously awarded badge %s to %s",
+                badge, self.id)
+            return
+
+        self.badges.append(badge.id)
+        self.save()
 
     def updateName(self):
         """

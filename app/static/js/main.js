@@ -36,7 +36,7 @@ var JST = {
         '<td><%= ban.reason %></td><td><%= ban.duration %></td></tr>'),
 
     forum_sidebar_header: _.template('<li class="list-group-item list-group-header"><%= cat.title %></li>'),
-    forum_sidebar_item: _.template('<a href="#" class="list-group-item"><%= item.title %></a>')
+    forum_sidebar_item: _.template('<a href="#" class="list-group-item"><%= item.title %></a>'),
     forum_thread: _.template('<div class="panel panel-default"><div class="panel-collapse collapse in">'+
         '<div class="panel-body">'+
         '<h3 style="margin-top: 0px; margin-bottom: 0px"><%= thread.title %></h3>'+

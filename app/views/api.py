@@ -7,6 +7,8 @@ from storage import STORAGE
 import json, requests, logging
 from steam import SteamAPI
 
+from util.badges import BADGES
+
 steam = SteamAPI.new()
 log = logging.getLogger(__name__)
 api = Blueprint('api', __name__, url_prefix='/api')
@@ -699,6 +701,33 @@ def api_users_avatar():
     buffered.seek(0)
     return send_file(buffered, mimetype="image/jpeg")
 
+@api.route("/users/info")
+def api_users_info():
+    args, success = require(id=int)
+
+    if not success:
+        return jsonify({
+            "success": False,
+            "msg": "You must specify a valid user ID!"
+        })
+
+    try:
+        u = User.get(User.id == args.id)
+    except User.DoesNotExist:
+        return "{}", 404
+
+    base = {
+        "username": u.username,
+        "steamid": u.steamid,
+        "joined": u.join_date,
+        "num_blocked": len(u.blocked),
+        "level": u.level,
+        "stats": u.stats,
+        "badges": u.badges
+    }
+
+    return jsonify(base)
+
 @api.route("/invites/accept", methods=['POST'])
 @authed()
 def api_invites_accept():
@@ -938,3 +967,33 @@ def api_forum_posts_get():
 @authed
 def api_forum_post():
     args, s = req(x=1, y=2)
+
+@api.route("/badge/list")
+def api_badge_list():
+    data = []
+
+    for badge in BADGES.values():
+        if badge.public:
+            data.append(badge.to_dict(with_count=True))
+
+    return jsonify({
+        "badges": data,
+        "success": True
+    })
+
+@api.route("/badge/info")
+def api_badge_info():
+    args, s = require(id=int)
+
+    if not s:
+        return jsonify({
+            "success": False,
+            "msg": "Must specify a badge ID"
+        })
+
+    if args.id in BADGES:
+        return jsonify(BADGES[args.id].to_dict(with_count=True))
+    return jsonify({
+        "success": False,
+        "msg": "Invalid Badge ID"
+    })

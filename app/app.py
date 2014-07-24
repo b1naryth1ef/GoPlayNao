@@ -62,7 +62,7 @@ def create_or_login(resp):
     try:
         g.user = User.steamGetOrCreate(match.group(1))
     except Exception as e:
-        return flashy("That user cannot join: %s" % e)
+        return flashy("Error: %s" % e)
     if g.user.getActiveBans().count():
         return flashy("You are banned!", "error")
     resp = flashy("Welcome back %s!" % g.user.username, "success")
