@@ -13,6 +13,9 @@ steam = SteamAPI.new()
 log = logging.getLogger(__name__)
 api = Blueprint('api', __name__, url_prefix='/api')
 
+# Valid width and height combinations
+VALID_SIZES = [(300, 200), (640, 360), (640, 480), (800, 600), (1280, 720), (1920, 1080)]
+
 @api.route("/info")
 @limit(60)
 def api_info():
@@ -38,7 +41,29 @@ def api_info():
 
     return jsonify(data)
 
-@api.route("/maps/list")
+@api.route("/stats")
+@limit(60)
+def api_stats():
+    """
+    Method that returns stats on the pug infastructure including server,
+    match and player stats.
+
+    Returned:
+        current:
+            players:
+                search: Players searching for pug
+                playing: Players playing
+            servers:
+                open: Availbile servers
+                used: Servers being used/private
+            matches: current number of matches being played
+
+    This endpoint is limited to 60 requests per minute
+    """
+    return Response(response=redis.get("stats_cache") or "{}",
+        status=200, mimetype="application/json")
+
+@api.route("/map/list")
 @limit(60)
 def api_maps():
     level = 0
@@ -52,11 +77,7 @@ def api_maps():
         status=200,
         mimetype="application/json")
 
-
-# Valid width and height combinations
-VALID_SIZES = [(300, 200), (640, 360), (640, 480), (800, 600), (1280, 720), (1920, 1080)]
-
-@api.route("/maps/image")
+@api.route("/map/image")
 @limit(300)
 def api_maps_image():
     """
@@ -94,7 +115,7 @@ def api_maps_image():
 
     return send_file(buffered, mimetype='image/jpeg')
 
-@api.route("/bans/list")
+@api.route("/ban/list")
 @limit(120)
 def api_bans_list():
     """
@@ -137,7 +158,7 @@ def api_bans_list():
 
     return jsonify(data)
 
-@api.route("/bans/get")
+@api.route("/ban/get")
 @limit(120)
 def api_bans_get():
     """
@@ -184,28 +205,6 @@ def api_bans_get():
     data = b.format()
     data['success'] = True
     return jsonify(data)
-
-@api.route("/stats")
-@limit(60)
-def api_stats():
-    """
-    Method that returns stats on the pug infastructure including server,
-    match and player stats.
-
-    Returned:
-        current:
-            players:
-                search: Players searching for pug
-                playing: Players playing
-            servers:
-                open: Availbile servers
-                used: Servers being used/private
-            matches: current number of matches being played
-
-    This endpoint is limited to 60 requests per minute
-    """
-    return Response(response=redis.get("stats_cache") or "{}",
-        status=200, mimetype="application/json")
 
 @api.route("/lobby/create", methods=['POST'])
 @authed()
@@ -509,7 +508,7 @@ def api_lobby_invite():
     return jsonify({"success": True})
 
 # TODO: elasticsearch
-@api.route("/users/search", methods=["POST"])
+@api.route("/user/search", methods=["POST"])
 @authed()
 def api_users_search():
     args, success = require(query=str)
@@ -528,7 +527,7 @@ def api_users_search():
     })
 
 # TODO: get is for testing
-@api.route("/users/friend", methods=['GET', 'POST'])
+@api.route("/user/friend", methods=['GET', 'POST'])
 @authed()
 def api_users_friend():
     args, success = require(id=int)
@@ -599,7 +598,7 @@ def api_users_friend():
     Invite.createFriendRequest(g.user, u)
     return jsonify({"success": True})
 
-@api.route("/users/unfriend", methods=['POST'])
+@api.route("/user/unfriend", methods=['POST'])
 @authed()
 def api_users_unfriend():
     args, success = require(id=int)
@@ -621,7 +620,7 @@ def api_users_unfriend():
     f.delete().execute()
     return jsonify({"success": True})
 
-@api.route("/users/stats")
+@api.route("/user/stats")
 @authed()
 def api_users_stats():
     args, success = require(id=int)
@@ -641,7 +640,7 @@ def api_users_stats():
         })
     return jsonify({"success": True, "stats": u.getStats()})
 
-@api.route("/users/friends")
+@api.route("/user/friends")
 @authed()
 def api_users_friends():
     """
@@ -668,7 +667,7 @@ def api_users_friends():
         "friends": data
     })
 
-@api.route("/users/avatar")
+@api.route("/user/avatar")
 @limit(120)
 def api_users_avatar():
     args, success = require(id=int)
@@ -701,7 +700,7 @@ def api_users_avatar():
     buffered.seek(0)
     return send_file(buffered, mimetype="image/jpeg")
 
-@api.route("/users/info")
+@api.route("/user/info")
 def api_users_info():
     args, success = require(id=int)
 
@@ -728,7 +727,7 @@ def api_users_info():
 
     return jsonify(base)
 
-@api.route("/invites/accept", methods=['POST'])
+@api.route("/invite/accept", methods=['POST'])
 @authed()
 def api_invites_accept():
     args, success = require(id=int)
@@ -754,7 +753,7 @@ def api_invites_accept():
         i.save()
         return jsonify({"success": True})
 
-@api.route("/invites/deny", methods=['POST'])
+@api.route("/invite/deny", methods=['POST'])
 @authed()
 def api_invites_deny():
     args, success = require(id=int)

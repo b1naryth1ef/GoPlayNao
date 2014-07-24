@@ -22,7 +22,7 @@ var JST = {
         '<% if (leader && m.id != us) { %><td id="<%= m.id %>"><a href="" id="lobby-kick-member" class="label label-danger lobby-kick">kick</a></td><% } %></tr>'),
 
     lobbyMap: _.template('<option <%= selected ? "selected" : ""%> style="height: 100px; width: 100px;"'+
-        ' data-img-src="/api/maps/image?map=<%- id %>&height=200&width=300"'+
+        ' data-img-src="/api/map/image?map=<%- id %>&height=200&width=300"'+
         ' value="<%= name %>"><%= title %></option>'),
 
     search_base: _.template('<li class="search-result"><a href="/u/<%= u.username %>"><div class="col-left">'+
@@ -144,7 +144,7 @@ var pug = {
     vglobal: function() {
         var search = function() {
             $(".search-result").remove()
-            $.ajax("/api/users/search", {
+            $.ajax("/api/user/search", {
                 type: "POST",
                 data: {
                     query: $("#search-input").val()
@@ -395,7 +395,7 @@ var pug = {
     },
 
     lobbyRenderFriends: function() {
-        $.ajax("/api/users/friends", {
+        $.ajax("/api/user/friends", {
             success: function (data) {
                 if (data.success) {
                     $.each(data.friends.online, function(_, v) {
@@ -410,7 +410,7 @@ var pug = {
     },
 
     lobbyRenderMapSelection: function() {
-        $.ajax("/api/maps/list", {
+        $.ajax("/api/map/list", {
             success: function (data) {
                 base = pug.getLocal("maps");
                 _.each(data, function (v) {
@@ -643,7 +643,7 @@ var pug = {
     friends: function() {
         pug.vglobal();
         $(".friends-unfriend").click(function (e) {
-            $.ajax("/api/users/unfriend", {
+            $.ajax("/api/user/unfriend", {
                 type: "POST",
                 data: {
                     id: $(this).attr("id")
@@ -702,7 +702,7 @@ var pug = {
         }
 
         // Ajax call to the bans api
-        $.ajax("/api/bans/list", {
+        $.ajax("/api/ban/list", {
             data: {
                 page: pug.bans_page_num
             },
@@ -768,7 +768,7 @@ var pug = {
 
     // Profile view
     profile: function(u) {
-        $.ajax("/api/users/stats", {
+        $.ajax("/api/user/stats", {
             data: {
                 id: u.id
             },
@@ -780,7 +780,7 @@ var pug = {
         })
 
         $("#add-friend").click(function (e) {
-            $.ajax("/api/users/friend", {
+            $.ajax("/api/user/friend", {
                 data: {
                     id: u.id
                 },

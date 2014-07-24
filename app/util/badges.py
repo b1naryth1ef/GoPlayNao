@@ -22,6 +22,7 @@ class Badge(object):
         return data
 
     def get_have_count(self):
+        # TODO: move this to stats/cache
         from database import User
         return User.select().where(User.badges.contains(self.id)).count()
 
