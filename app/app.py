@@ -81,6 +81,7 @@ def beforeRequest():
     if request.cookies.get("sid"):
         s = Session.find(request.cookies.get("sid"))
         if s:
+            # Eventually we should be lazily loading this in, or cacheing it at redis
             try:
                 g.user = User.select().where(User.id == s['user']).get()
             except User.DoesNotExist:

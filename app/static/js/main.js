@@ -573,6 +573,12 @@ var pug = {
         // The following handles sending chat messages
         var send_lobby_chat = function () {
             var msg = $("#lobby-chat-text").val();
+
+            // Don't send empty messages
+            if (msg == "") {
+                return;
+            }
+
             $.ajax("/api/lobby/chat", {
                 type: "POST",
                 data: {

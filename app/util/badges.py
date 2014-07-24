@@ -32,3 +32,15 @@ BADGE_BETA_TESTER = Badge(
     "Beta Tester",
     "Helped during the beta of GoPlayMM"
 )
+
+BADGE_DONATOR = Badge(
+    2,
+    "Donator",
+    "Donated to the GoPlayMM project"
+)
+
+BADGE_CONTRIBUTOR = Badge(
+    3,
+    "Contributor",
+    "Contributed to the GoPlayMM project"
+)

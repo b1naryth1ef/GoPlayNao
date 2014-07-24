@@ -32,6 +32,11 @@
                 <div class="widget-content">
                     <div class="row">
                         <div class="col-md-8">
+                            {% if not g.user %}
+                            <div class="alert alert-danger">
+                                GoPlayMM is currently in a closed beta! Feel free to look around, and join us on IRC (Quakenet, #goplaymm) for more information about the beta!
+                            </div>
+                            {% endif %}
                             <p class="lead">
                                 GoPlayMM is a free, web-based matchmaking system for Counter Strike: Global Offensive that aims to provide consistent high-performance servers, an easy to use platform with no third-party clients, additional maps, in-depth stats to users, and additional features which enhance and build upon Valve's matchmaking concepts.
                             </p>

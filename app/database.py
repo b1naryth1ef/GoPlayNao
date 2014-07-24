@@ -614,12 +614,13 @@ class Match(BaseModel):
 
     def getTeam(self, team):
         t = self.teama if team.lower() == "a" else self.teamb
-        for lobby in self.t:
+        for lobby in t:
             lobby = Lobby.get(Lobby.id == lobby)
             for player in lobby.members:
-                yield User.get(User.id == player)       
+                yield User.get(User.id == player)
 
     def getTeamA(self): return self.getTeam("a")
+
     def getTeamB(self): return self.getTeam("b")
 
     def setDefaultConfig(self):
@@ -798,8 +799,10 @@ def create_forums():
     f2 = Forum(title="General Discussion", perm_view=0, perm_post=1, order=0, parent=cat1)
     f2.save()
 
+TABLES = [User, Server, Ban, Lobby, Invite, Friendship, Map, Match, Report, Forum, ForumPost]
+
 if __name__ == "__main__":
-    for table in [User, Server, Ban, Lobby, Invite, Friendship, Map, Match, Report, Forum, ForumPost]:
+    for table in TABLES:
         table.drop_table(True, cascade=True)
         table.create_table(True)
 
@@ -822,7 +825,7 @@ if __name__ == "__main__":
     s = Server()
     s.name = "Test Server #1"
     s.region = ServerRegion.REGION_NA_IL
-    s.hash = '1' #get_random_number(32)
+    s.hash = '1'
     s.hostname = "localhost"
     s.hosts = ["127.0.0.1", "localhost"]
     s.owner = u
