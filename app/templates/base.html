@@ -82,6 +82,9 @@
             </a>
             <ul class="nav navbar-nav navbar-right">
                 {% if g.user %}
+                    {% if g.user.level >= g.user.get_level("admin") %}
+                        <li><a href="/admin"><i class="icon-smile"></i> Admin</a></li>
+                    {% endif %}
                     <li><a href="/lobby"><i class="icon-group"></i> New Lobby</a></li>
                     <li><a href="/friends"><i class="icon-heart"></i> Friends</a></li>
                     <li class="dropdown user">

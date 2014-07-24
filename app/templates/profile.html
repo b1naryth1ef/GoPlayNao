@@ -42,12 +42,9 @@
                                     {% if bans.count() %}
                                         {% set ban = bans[0] %}
                                         <div class="alert alert-danger">
-                                            This user is banned{% if ban.end %} until{%endif %} {{ ban.getDurationString() }} for "{{ ban.reason }}"!
+                                            This user is banned {% if ban.end %}until{%endif %} {{ ban.getDurationString() }} for "{{ ban.reason }}"!
                                         </div>
                                     {% endif %}
-
-                                    <h1>John Doe</h1>
-
 
                                     <p>Lorem ipsum dolor sit amet, consectetuer
                                     adipiscing elit, sed diam nonummy nibh euismod

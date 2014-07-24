@@ -31,11 +31,16 @@ class BaseModel(Model):
 
 class UserLevel(object):
     USER_LEVEL_BASE = 0
+    USER_LEVEL_MOD = 90
     USER_LEVEL_ADMIN = 100
 
 # For beta, we only allow users in this array
 ALLOWED_USERS = [
     "76561198037632722",
+]
+
+DEFAULT_ADMINS = [
+    "76561198037632722"
 ]
 
 class User(BaseModel, Entity):
@@ -64,6 +69,11 @@ class User(BaseModel, Entity):
     badges = ArrayField(IntegerField, default=[])
 
     @classmethod
+    def get_level(self, s):
+        if s == "admin":
+            return UserLevel.USER_LEVEL_ADMIN
+
+    @classmethod
     def steamGetOrCreate(cls, id):
         """
         Gets or creates a user based on a steamid. Raises an exception if
@@ -86,6 +96,11 @@ class User(BaseModel, Entity):
             u = User()
             u.username = data['personaname']
             u.steamid = id
+
+            # Default admin level (for beta)
+            if str(id) in DEFAULT_ADMINS:
+                u.level = UserLevel.USER_LEVEL_ADMIN
+
             u.save()
 
         if config.IS_BETA:
@@ -180,6 +195,9 @@ class User(BaseModel, Entity):
 
     def push(self, data):
         redis.publish("user:%s:push" % self.id, json.dumps(data))
+
+class UserProfile(BaseModel):
+    pass
 
 class ServerType():
     SERVER_MATCH = 1

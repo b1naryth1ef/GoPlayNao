@@ -12,6 +12,7 @@ from util import flashy, limit
 # from worker import run
 from views.public import public
 from views.api import api
+from views.admin import admin
 
 # Global
 import time, json
@@ -26,6 +27,7 @@ steam = SteamAPI.new()
 
 app.register_blueprint(public)
 app.register_blueprint(api)
+app.register_blueprint(admin)
 
 STATE = 0
 
