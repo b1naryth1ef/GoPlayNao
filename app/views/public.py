@@ -23,7 +23,7 @@ def public_lobby(id=None):
             return flashy("That lobby has expired!")
 
         # LOL SILLY, you can't be in more than one lobby at a time! Duh!
-        for lob in Lobby.select().where((Lobby.members.contains(g.user.id)) & (Lobby.id != id)):
+        for lob in Lobby.select().where((Lobby.members.contains(g.uid)) & (Lobby.id != id)):
             lob.userLeave(g.user)
 
         lobby.joinLobby(g.user)
@@ -33,8 +33,8 @@ def public_lobby(id=None):
 @authed()
 def public_friends():
     requests = list(g.user.getFriendRequests())
-    friends = Friendship.select().where(((Friendship.usera == g.user) |
-        (Friendship.userb == g.user)) &
+    friends = Friendship.select().where(((Friendship.usera == g.uid) |
+        (Friendship.userb == g.uid)) &
         Friendship.active == True)
     friends = [i for i in friends]
 
@@ -75,7 +75,8 @@ def public_match(id):
     except Match.DoesNotExist:
         return flashy("That match does not exist!")
 
-    if match.level > g.user.level:
+    level = User.select(User.level).where(User.id == g.uid).get().level
+    if match.level > level:
         return flashy("You do not have permission to view that!")
 
     return render_template("match.html", match=id)

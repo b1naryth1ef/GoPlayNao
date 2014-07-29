@@ -212,9 +212,6 @@ class User(BaseModel, Entity):
     def push(self, data):
         redis.publish("user:%s:push" % self.id, json.dumps(data))
 
-class UserProfile(BaseModel):
-    pass
-
 class ServerType():
     SERVER_MATCH = 1
     SERVER_DEV = 2

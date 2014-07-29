@@ -54,6 +54,7 @@ def logout():
 @app.route("/test/<id>")
 def test(id):
     g.user = User.select().where(User.id == id).get()
+    g.uid = g.user.id
     resp = flashy("Welcome back %s!" % g.user.username, "success")
     resp.set_cookie("sid", g.user.login(), expires=time.time() + Session.LIFETIME)
     return resp
@@ -63,6 +64,7 @@ def create_or_login(resp):
     match = steam.steam_id_re.search(resp.identity_url)
     try:
         g.user = User.steamGetOrCreate(match.group(1))
+        g.uid = g.user.id
     except Exception as e:
         return flashy("Error: %s" % e)
     if g.user.getActiveBans().count():
@@ -74,6 +76,7 @@ def create_or_login(resp):
 @app.before_request
 def beforeRequest():
     g.user = None
+    g.uid = -1
     g.state = STATE
 
     if request.path.startswith("/static"):
@@ -86,6 +89,7 @@ def beforeRequest():
             # Eventually we should be lazily loading this in, or cacheing it at redis
             try:
                 g.user = User.select().where(User.id == s['user']).get()
+                g.uid = g.user.id
             except User.DoesNotExist:
                 resp = flashy("Wow! Something really went wrong. Contact support!")
                 resp.set_cookie('sid', '', expires=0)

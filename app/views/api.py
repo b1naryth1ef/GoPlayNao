@@ -38,7 +38,7 @@ def api_info():
     }
 
     if g.user:
-        data['user'] = g.user.id
+        data['user'] = g.uid
 
     return jsonify(data)
 
@@ -68,8 +68,8 @@ def api_stats():
 @limit(60)
 def api_maps():
     level = 0
-    if g.user:
-        level = g.user.level
+    if g.uid:
+        level = User.select(User.level).where(User.id == g.uid).get().level
 
     data = "["+', '.join(redis.zrangebyscore("maps", min=0, max=level))+"]"
 
@@ -222,11 +222,12 @@ def api_lobby_create():
     log.info("In lobby create!")
 
     # Delete all other lobbies this guy owns (kinda sucks, but w/e)
-    for lobby in Lobby.select().where(Lobby.owner == g.user):
+    for lobby in Lobby.select().where(Lobby.owner == g.uid):
         log.info("Deleting lobby #%s" % lobby.id)
         lobby.cleanup()
         lobby.delete().execute()
 
+    # TODO: optimize query
     lobby = Lobby.getNew(g.user, config.get("maps", []))
     log.info("Created lobby #%s" % lobby.id)
     data = lobby.format()
@@ -267,7 +268,7 @@ def api_lobby_edit():
     if not isinstance(lobby, Lobby):
         return lobby
 
-    if lobby.owner != g.user:
+    if lobby.owner != g.uid:
         return jsonify({
             "success": False,
             "msg": "You do not have permission to edit that lobby!"
@@ -316,6 +317,7 @@ def api_lobby_chat():
             "msg": "Lobby chat messages must contain something!"
         })
 
+    # TODO: optimize
     lobby.sendChat(g.user, args.msg)
     return jsonify({
         "success": True
@@ -343,6 +345,7 @@ def api_lobby_action():
         })
 
     if args.action == "leave":
+        # TODO: optimize
         lobby.userLeave(g.user)
         return jsonify({"success": True})
 
@@ -354,7 +357,7 @@ def api_lobby_action():
                 "msg": "No match to accept!"
             })
 
-        # TODO: match accept time check
+        # TODO: match accept time check / optimize
         m.accept(g.user)
         accepted = len(m.getAccepted())
 
@@ -404,7 +407,7 @@ def api_lobby_action():
         lobby.kickUser(u)
         return jsonify({"success": True})
 
-    if lobby.owner != g.user:
+    if lobby.owner.id != g.uid:
         return jsonify({
             "success": False,
             "msg": "You must be the lobby owner to modify the lobby!"
@@ -471,7 +474,7 @@ def api_lobby_invite():
             "msg": "No lobby with that id!"
         })
 
-    if not g.user.id in l.members:
+    if not g.uid in l.members:
         return jsonify({
             "success": False,
             "msg": "You cannot invite users to that lobby!"
@@ -483,6 +486,7 @@ def api_lobby_invite():
             "msg": "That user is already part of the lobby!"
         })
 
+    # TODO: optimize query
     q = Invite.select().where(
         (Invite.getQuery(g.user, u)) &
         (Invite.state == InviteState.INVITE_WAITING) &
@@ -544,7 +548,7 @@ def api_users_friend():
             "msg": "You must give a user id to friend a user!"
         })
 
-    if args.id == g.user.id:
+    if args.id == g.uid:
         return jsonify({
             "success": False,
             "msg": "You cannot friend yourself!"
@@ -578,7 +582,7 @@ def api_users_friend():
     # If there is an invite waiting to be accepted by either party, display that
     if waiting.count():
         w = waiting.get()
-        if w.from_user == g.user:
+        if w.from_user == g.uid:
             return jsonify({
                 "success": False,
                 "msg": "You've already invited that user to be your friend!"
@@ -591,7 +595,7 @@ def api_users_friend():
 
     denied = Invite.select().where(
         (Invite.to_user == u) &
-        (Invite.from_user == g.user) &
+        (Invite.from_user == g.uid) &
         (Invite.state == InviteState.INVITE_DENIED))
 
     # If WE have invited that user, and they denied, display the invite as waiting
