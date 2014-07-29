@@ -1,5 +1,4 @@
 
-
 var LobbyState = {
     LOBBY_STATE_CREATE: 1,
     LOBBY_STATE_IDLE: 2,
@@ -7,7 +6,6 @@ var LobbyState = {
     LOBBY_STATE_PLAY: 4,
     LOBBY_STATE_UNUSED: 5
 }
-
 
 var JST = {
     invite: _.template('<li id="side-bar-invite"><div class="col-left">'+
@@ -393,6 +391,7 @@ var pug = {
 
     lobbyRmvMember: function(id) {
         $("#member-"+id).remove();
+        delete pug.lobbymembers[pug.lobbymembers.indexOf(id)]
     },
 
     lobbyRenderFriends: function() {
@@ -400,6 +399,7 @@ var pug = {
 
         $.ajax("/api/user/friends", {
             success: function (data) {
+                console.log(pug.lobbymembers)
                 if (data.success) {
                     $.each(data.friends.online, function(_, v) {
                         if ($.inArray(v.id, pug.lobbymembers) != -1) {
@@ -515,6 +515,11 @@ var pug = {
                 data: {
                     lid: pug.lobbyid,
                     uid: $(this).attr("id")
+                },
+                success: function(data) {
+                    if (!data.success) {
+                         pug.lobbyAddAction(data.msg, "danger");
+                    }
                 }
             });
         });
@@ -558,7 +563,7 @@ var pug = {
             })
         });
 
-        $("#lobby-leave").click(function () {
+        $(".lobby-leave").click(function () {
             $.ajax("/api/lobby/action", {
                 type: "POST",
                 data: {

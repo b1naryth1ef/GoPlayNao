@@ -336,11 +336,15 @@ def api_lobby_action():
     if not isinstance(lobby, Lobby):
         return lobby
 
-    if args.action not in ['quit', 'start', 'stop', 'kick', 'accept']:
+    if args.action not in ['quit', 'start', 'stop', 'kick', 'accept', 'leave']:
         return jsonify({
             "success": False,
             "msg": "Invalid lobby action `%s`!" % args.action
         })
+
+    if args.action == "leave":
+        lobby.userLeave(g.user)
+        return jsonify({"success": True})
 
     if args.action == "accept":
         m = lobby.getMatch()

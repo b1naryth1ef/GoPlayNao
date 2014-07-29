@@ -390,8 +390,11 @@ class Lobby(BaseModel):
             "member": u.id,
             "msg": msg % u.username
         })
-        self.members.remove(u.id)
-        self.save()
+
+        if u.id in self.members:
+            self.members.remove(u.id)
+            self.save()
+
         if self.state == LobbyState.LOBBY_STATE_SEARCH:
             self.stopQueue()
 
