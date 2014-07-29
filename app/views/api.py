@@ -6,6 +6,7 @@ from StringIO import StringIO
 from storage import STORAGE
 import json, requests, logging
 from steam import SteamAPI
+from dateutil.relativedelta import relativedelta
 
 from util.badges import BADGES
 
@@ -482,7 +483,8 @@ def api_lobby_invite():
         (Invite.getQuery(g.user, u)) &
         (Invite.state == InviteState.INVITE_WAITING) &
         (Invite.invitetype == InviteType.INVITE_TYPE_LOBBY) &
-        (Invite.ref == l.id))
+        (Invite.ref == l.id) &
+        (Invite.created >= (datetime.utcnow() - relativedelta(seconds=25))))
 
     if q.count():
         return jsonify({

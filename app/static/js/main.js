@@ -239,10 +239,12 @@ var pug = {
             case "join":
                 pug.lobbyAddMember(data.member);
                 pug.lobbyAddAction(data.msg, "success");
+                pug.lobbyRenderFriends();
                 break;
             case "quit":
                 pug.lobbyRmvMember(data.member);
                 pug.lobbyAddAction(data.msg, "danger");
+                pug.lobbyRenderFriends();
                 break;
             case "kick":
                 if (data.member == USER.id) {
@@ -308,8 +310,7 @@ var pug = {
                     alert(data.msg);
                 }
             }
-        })
-        
+        })  
     },
 
     lobbyCreate: function(e) {
@@ -395,6 +396,8 @@ var pug = {
     },
 
     lobbyRenderFriends: function() {
+        $("#lobby-friends-list").empty()
+
         $.ajax("/api/user/friends", {
             success: function (data) {
                 if (data.success) {
@@ -666,7 +669,7 @@ var pug = {
 
         $(".friends-deny").click(function (e) {
             var dis = $(this)
-            $.ajax("/api/invites/deny", {
+            $.ajax("/api/invite/deny", {
                 type: "POST",
                 data: {
                     id: $(this).attr("id")
@@ -682,7 +685,7 @@ var pug = {
 
         $(".friends-accept").click(function (e) {
             var dis = $(this);
-            $.ajax("/api/invites/accept", {
+            $.ajax("/api/invite/accept", {
                 type: "POST",
                 data: {
                     id: $(this).attr("id")
@@ -871,8 +874,18 @@ $(document).ready(function () {
     //  this going
     pug.getStats();
 
+    var support = {
+        "ws": Modernizr.websockets,
+        "ls": Modernizr.localstorage,
+        "hi": Modernizr.history,
+        "wn": window.webkitNotifications,
+        "js": window.JSON
+    }
+
+    console.log(support)
+
     // Warn users that do not have good support for our features
-    if (!Modernizr.websockets || !Modernizr.localstorage || !Modernizr.history || !window.webkitNotifications || !window.JSON) {
+    if (!support.ws || !support.ls || !support.hi || !support.js) {
         $(".bad-browser-alert").fadeIn();
     }
 });

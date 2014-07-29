@@ -271,9 +271,9 @@ class Lobby(BaseModel):
     members = ArrayField(IntegerField, 5, default=[])
     config = JSONField()
 
-    @classmethod
-    def getNew(cls, user, maps=[]):
-        self = cls()
+    @staticmethod
+    def getNew(user, maps=[]):
+        self = Lobby()
         self.owner = user
 
         # Default Config
@@ -396,6 +396,11 @@ class Lobby(BaseModel):
             self.stopQueue()
 
     def kickUser(self, u):
+        # Delete from members
+        if u.id in self.members:
+            self.members.remove(u.id)
+            self.save()
+
         self.sendAction({
             "type": "kick",
             "member": u.id,

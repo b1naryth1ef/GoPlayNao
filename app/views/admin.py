@@ -12,3 +12,7 @@ def before_admin_request():
 @admin.route("/")
 def admin_index():
     return render_template("admin/index.html")
+
+@admin.route("/as_user/<id>")
+def admin_as_user(id):
+    pass
