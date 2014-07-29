@@ -36,7 +36,14 @@ class UserLevel(object):
 
 # For beta, we only allow users in this array
 ALLOWED_USERS = [
-    "76561198037632722",
+    "76561198037632722",  # B1nzy
+    "76561198036730895",  # Bigzy
+    "76561198041232375",  # Freddy
+    "76561198041079607",  # Cosmic
+    "76561198030565707",  # Quick
+    "76561198097612194",  # Eq
+    "76561198062483845",  # Trick
+    "76561197980195744",  # Ever
 ]
 
 DEFAULT_ADMINS = [
@@ -866,6 +873,9 @@ if __name__ == "__main__":
     s.owner = u
     s.active = True
     s.save()
+
+    from worker import task_load_workshop_maps
+    task_load_workshop_maps()
 
     print "Server: %s | %s" % (s.id, s.hash)
     print "Test User: %s" % u.id
