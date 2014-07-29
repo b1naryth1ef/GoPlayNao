@@ -60,6 +60,11 @@ def public_bans():
 def public_about():
     return render_template("about.html")
 
+@public.route("/settings")
+@authed()
+def public_settings():
+    return render_template("settings.html", user=g.user)
+
 @public.route("/matches")
 def public_matches(): pass
 

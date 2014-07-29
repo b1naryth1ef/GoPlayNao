@@ -1,0 +1,56 @@
+{% set bans = user.getActiveBans() %}
+{% extends "base.html" %} {% block content %}
+<div class="container" style="fixed-header">
+    <div class="page-header">
+        <div class="page-title">
+            <h3>Settings</h3>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="widget box">
+                <div class="widget-content">
+                    <form class="form-horizontal row-border" action="#">
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Username</label>
+                            <div class="col-md-10">
+                                <input class="form-control" type="text" name="name" readonly="" value="{{ user.username }}">
+                                <span class="help-block"><i>Your username is automatically pulled from steam. If it's outdated, save your profile and we'll update it immediatly!</i></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">About Me</label>
+                            <div class="col-md-10">
+                                <textarea rows="3" cols="5" name="textarea" class="auto form-control" style="overflow: hidden; word-wrap: break-word; resize: horizontal; height: 68px;" value="{{ user.description }}"></textarea>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Notifications </label>
+                            <div class="col-md-10">
+                                <label class="checkbox">
+                                    <div class="checker">
+                                        <span><input type="checkbox" class="uniform" value=""></span>
+                                    </div>
+                                    Audio
+                                </label>
+                                <label class="checkbox">
+                                    <div class="checker">
+                                        <span><input type="checkbox" class="uniform" value=""></span>
+                                    </div>
+                                    Desktop (if availbile)
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // pug.profile({{ user.format()|json|safe }})
+</script>
+
+{% endblock %}

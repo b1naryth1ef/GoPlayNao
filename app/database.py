@@ -45,6 +45,7 @@ DEFAULT_ADMINS = [
 
 class User(BaseModel, Entity):
     username = CharField()
+    description = TextField(default="")
     email = CharField(null=True)
     steamid = CharField(null=True)
 
