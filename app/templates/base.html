@@ -68,6 +68,7 @@
         USER.id = {{ g.user.id }}
         USER.name = "{{ g.user.username }}"
         USER.steamid = {{ g.user.steamid }}
+        USER.settings = {{ g.user.settings|json|safe }}
     {% endif %}
     </script>
 </head>

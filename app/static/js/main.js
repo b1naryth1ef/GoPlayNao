@@ -116,6 +116,7 @@ var pug = {
     },
 
     notify: function(msg) {
+        if (!USER.settings.notifications.desktop)
         if (!window.webkitNotifications) { return; }
         if (window.webkitNotifications.checkPermission() == 0) {
             window.webkitNotifications.createNotification('icon.png', msg.title, msg.content);
@@ -203,7 +204,9 @@ var pug = {
         flashTitle("New Invitation!");
 
         // Play Invite Sounds
-        new Audio(SOUNDS.invite).play()
+        if (USER.settings.notifications.sound) {
+            new Audio(SOUNDS.invite).play()
+        }
 
         if (sbn.children().length > 4) {
             var obj = sbn.children()[4];

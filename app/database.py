@@ -59,6 +59,14 @@ class User(BaseModel, Entity):
     # Permissions
     level = IntegerField(default=UserLevel.USER_LEVEL_BASE)
 
+    # Settings
+    settings = JSONField(default={
+        "notifications": {
+            "sound": True,
+            "desktop": True,
+        }
+    })
+
     # Rank and impulse
     rank = IntegerField(default=0)
     impulse = FloatField(default=0)
