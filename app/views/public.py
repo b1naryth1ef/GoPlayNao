@@ -65,6 +65,10 @@ def public_about():
 def public_settings():
     return render_template("settings.html", user=g.user)
 
+@public.route("/donate")
+def public_donate():
+    return render_template("donate.html", user=g.user)
+
 @public.route("/matches")
 def public_matches(): pass
 
