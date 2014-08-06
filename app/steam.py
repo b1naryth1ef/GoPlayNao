@@ -1,4 +1,4 @@
-import requests, re
+import requests, re, xmltodict
 from pyquery import PyQuery
 from config import STEAM_KEY
 
@@ -49,6 +49,14 @@ class SteamAPI(object):
         resp = function(url, params=data)
         resp.raise_for_status()
         return resp.json()
+
+    def getGroupMembers(self, id):
+        """
+        Returns a list of steam 64bit ID's for every member in group `group`,
+        a group public shortname or ID.
+        """
+        r = requests.get("http://steamcommunity.com/groups/%s/memberslistxml/?xml=1" % id)
+        return xmltodict.parse(r.content)['memberList']['members'].values()
 
     def getUserInfo(self, id):
         return self.request("ISteamUser/GetPlayerSummaries/v0001", {

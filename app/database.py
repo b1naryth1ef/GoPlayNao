@@ -34,18 +34,6 @@ class UserLevel(object):
     USER_LEVEL_MOD = 90
     USER_LEVEL_ADMIN = 100
 
-# For beta, we only allow users in this array
-ALLOWED_USERS = [
-    "76561198037632722",  # B1nzy
-    "76561198036730895",  # Bigzy
-    "76561198041232375",  # Freddy
-    "76561198041079607",  # Cosmic
-    "76561198030565707",  # Quick
-    "76561198097612194",  # Eq
-    "76561198062483845",  # Trick
-    "76561197980195744",  # Ever
-]
-
 DEFAULT_ADMINS = [
     "76561198037632722"
 ]
@@ -102,7 +90,8 @@ class User(BaseModel, Entity):
 
         # During beta, only allow a set list of hardcoded steam id's
         if config.IS_BETA:
-            if str(id) not in ALLOWED_USERS:
+            allowed = steam.getGroupMembers("goplaymm")
+            if str(id) not in allowed:
                 raise Exception("This user is not authorized to join the private beta!")
 
         try:
