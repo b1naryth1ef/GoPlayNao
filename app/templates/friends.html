@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="container" style="fixed-header">
+<div class="container" style="fixed-header" id="friends-cont">
     <div class="page-header">
         <div class="page-title">
             <h3>Friends</h3> 
@@ -14,33 +14,24 @@
                     <h4>Your Friends</h4>
                 </div>
                 <div class="widget-content">
-                    {% if friends %}
-                        <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Username</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for friend in friends %}
-                            <tr>
-                                <td>{{ loop.index }}</td>
-                                <td>{{ friend.getNot(g.user).username}}</td>
-                                <td><button id="{{ friend.id }}" class="btn btn-xs btn-danger friends-unfriend">Unfriend</button></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody> 
-                        </table>
-                    {% else %}
+                    <table class="table table-hover" id="friends-table" style="display:none">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Friends Sense</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody> 
+                    </table>
+                    <div id="friends-none" style="display:none">
                         <h3>Awwww... You don't have any friends yet! Go make some!</h3>
-                    {% endif %}
-
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
     {% if requests %}
     <div class="row" id="friends-main">
         <div class="col-md-12">
@@ -49,7 +40,7 @@
                     <h4>Friend Requests</h4>
                 </div>
                 <div class="widget-content">
-                    <table class="table table-hover">
+                    <table class="table table-hover" id="frequests-table">
                         <thead>
                             <tr>
                                 <th>#</th>

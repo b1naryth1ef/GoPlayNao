@@ -163,12 +163,19 @@ class User(BaseModel, Entity):
         self.save()
         return Session.create(self, request.remote_addr)
 
-    def format(self):
-        return {
+    def format(self, with_friendship=None):
+        base = {
             "id": self.id,
             "steamid": self.steamid,
             "username": self.username
         }
+
+        if with_friendship:
+            base['friendship'] = {}
+            base['friendship']['id'] = with_friendship.id
+            base['friendship']['started'] = with_friendship.created
+
+        return base
 
     def getFriendsWithQuery(self, user):
         return Friendship.select().where(
@@ -512,6 +519,7 @@ class Invite(BaseModel):
 class Friendship(BaseModel):
     usera = ForeignKeyField(User, related_name="friendshipa")
     userb = ForeignKeyField(User, related_name="friendshipb")
+    created = DateTimeField(default=datetime.utcnow)
     active = BooleanField(default=True)
 
     @classmethod

@@ -8,7 +8,7 @@ from database import *
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
 from storage import STORAGE
-import itertools, tempfile, sqlite3
+import itertools
 
 schedules = {}
 

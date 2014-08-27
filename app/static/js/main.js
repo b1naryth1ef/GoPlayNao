@@ -39,7 +39,12 @@ var JST = {
         '<div class="panel-body">'+
         '<h3 style="margin-top: 0px; margin-bottom: 0px"><%= thread.title %></h3>'+
         '<b>Posted <%= thread.time %> ago by <a href="/u/0"><%= thread.author %></a></b>'+
-        '</div></div></div>')
+        '</div></div></div>'),
+
+    friend_single: _.template('<tr><td><%= friend.username %></td>' +
+        '<td><%= friend.friendship.started %></td>' +
+        '<td><button id="<%= friend.friendship.id %>" class="btn btn-xs btn-danger friends-unfriend">Unfriend</button></td>' +
+        '</tr>')
 
 }
 
@@ -220,7 +225,6 @@ var pug = {
         $("#lobby-maker").show();
         $("#lobby").show();
 
-        pug.vglobal();
         if (id) {
             pug.lobbyJoin(id);
         } else {
@@ -657,9 +661,31 @@ var pug = {
         $.ajax("/api/stats", {success: pug.handleStats})
     },
 
+    friendsRenderListing: function(obj) {
+        $("#friends-none").hide();
+        $("#friends-table").hide();
+
+        all = obj.friends.banned.concat(obj.friends.offline).concat(obj.friends.online)
+        if (all.length) {
+            $("#friends-table").show();
+        } else {
+            $("#friends-none").show();
+        }
+
+        $("#friends-table tbody").empty();
+        _.each(all, function (item) {
+            $("#friends-table tbody").append(JST.friend_single({
+                friend: item
+            }))
+        });
+    },
+
     friends: function() {
-        pug.vglobal();
-        $(".friends-unfriend").click(function (e) {
+        $.ajax("/api/user/friends", {
+            success: pug.friendsRenderListing
+        })
+
+        $("#friends-cont").delegate(".friends-unfriend", "click", function (e) {
             $.ajax("/api/user/unfriend", {
                 type: "POST",
                 data: {
@@ -667,15 +693,17 @@ var pug = {
                 },
                 success: function (data) {
                     if (data.success) {
-                        // FIXME
-                        $($(this).parent()).remove()
+                        $.ajax("/api/user/friends", {
+                            success: pug.friendsRenderListing
+                        })
+
                         pug.msg("Removed friend!", "success", "#friends-main", true)
                     }
                 }
             });
         });
 
-        $(".friends-deny").click(function (e) {
+        $("#friends-cont").delegate(".friends-deny", "click", function (e) {
             var dis = $(this)
             $.ajax("/api/invite/deny", {
                 type: "POST",
@@ -686,12 +714,15 @@ var pug = {
                     if (data.success) {
                         dis.parents()[1].remove()
                         pug.msg("Denied Friend Invite!", "warning", "#friends-main", true)
+                        if (!$("#frequests-table tbody").length) {
+                            $("#frequests-table").fadeOut();
+                        }
                     }
                 }
             })
         });
 
-        $(".friends-accept").click(function (e) {
+        $("#friends-cont").delegate(".friends-accept", "click", function (e) {
             var dis = $(this);
             $.ajax("/api/invite/accept", {
                 type: "POST",
@@ -702,7 +733,14 @@ var pug = {
                     if (data.success) {
                         dis.parents()[1].remove()
                         pug.msg("Accepted Friend Invite!", "success", "#friends-main", true)
-                        setTimeout(location.refresh, 3000);
+
+                        if (!$("#frequests-table tbody").length) {
+                            $("#frequests-table").fadeOut();
+                        }
+
+                        $.ajax("/api/user/friends", {
+                            success: pug.friendsRenderListing
+                        })
                     }
                 }
             })
@@ -881,6 +919,9 @@ $(document).ready(function () {
     // We immediatly load stats to display on the page, websocket will keep
     //  this going
     pug.getStats();
+
+    // Start the websocket up so we're still viewed as online
+    pug.vglobal();
 
     var support = {
         "ws": Modernizr.websockets,

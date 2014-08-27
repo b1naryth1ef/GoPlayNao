@@ -225,7 +225,7 @@ def api_lobby_create():
     for lobby in Lobby.select().where(Lobby.owner == g.uid):
         log.info("Deleting lobby #%s" % lobby.id)
         lobby.cleanup()
-        lobby.delete().execute()
+        lobby.delete_instance()
 
     # TODO: optimize query
     lobby = Lobby.getNew(g.user, config.get("maps", []))
@@ -268,7 +268,7 @@ def api_lobby_edit():
     if not isinstance(lobby, Lobby):
         return lobby
 
-    if lobby.owner != g.uid:
+    if lobby.owner.id != g.uid:
         return jsonify({
             "success": False,
             "msg": "You do not have permission to edit that lobby!"
@@ -627,7 +627,7 @@ def api_users_unfriend():
             "msg": "Invalid Friendship ID!"
         })
 
-    f.delete().execute()
+    f.delete_instance()
     return jsonify({"success": True})
 
 @api.route("/user/stats")
@@ -666,11 +666,11 @@ def api_users_friends():
     for entry in q:
         user = entry.getNot(g.user)
         if user.getActiveBans().count():
-            data['banned'].append(user.format())
+            data['banned'].append(user.format(with_friendship=entry))
         elif user.isOnline():
-            data['online'].append(user.format())
+            data['online'].append(user.format(with_friendship=entry))
         else:
-            data['offline'].append(entry.format())
+            data['offline'].append(user.format(with_friendship=entry))
 
     return jsonify({
         "success": True,
