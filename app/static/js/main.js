@@ -658,7 +658,12 @@ var pug = {
 
     // Loads stats from the backend and dynamically loads them into values
     getStats: function () {
-        $.ajax("/api/stats", {success: pug.handleStats})
+        try {
+            $.ajax("/api/stats", {success: pug.handleStats})
+        } catch (err) {
+            console.log("Failed to load stats! Error:")
+            console.log(err)
+        }
     },
 
     friendsRenderListing: function(obj) {

@@ -813,6 +813,11 @@ class ForumPost(BaseModel):
             "deleted": self.deleted
         }
 
+class Diagnostic(BaseModel):
+    ip = CharField()
+    user = ForeignKeyField(user, null=True)
+    data = JSONField(default={})
+
 def load_default_maps():
     print "Loading default maps..."
     with open("content/maps.json", "r") as f:
@@ -835,7 +840,10 @@ def create_forums():
     f2 = Forum(title="General Discussion", perm_view=0, perm_post=1, order=0, parent=cat1)
     f2.save()
 
-TABLES = [User, Server, Ban, Lobby, Invite, Friendship, Map, Match, Report, Forum, ForumPost]
+TABLES = [
+    User, Server, Ban, Lobby, Invite, Friendship,
+    Map, Match, Report, Forum, ForumPost, Diagnostic
+]
 
 if __name__ == "__main__":
     for table in TABLES:
